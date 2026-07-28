@@ -21,6 +21,7 @@ const shell = ref<ShellSnapshot>({
   alwaysOnTop: true,
   visibleOnAllWorkspaces: true,
 });
+const shellFailure = ref<CommandError | null>(null);
 const currentStep = ref<BehaviorStep | null>(null);
 const timelineRunning = ref(false);
 const loading = ref(true);
@@ -317,6 +318,10 @@ async function bindNativeEvents(): Promise<void> {
   unlisteners.push(
     await listen<ShellSnapshot>("shell-state", ({ payload }) => {
       shell.value = payload;
+      if (shellFailure.value) {
+        shellFailure.value = null;
+        status.value = "窗口状态已恢复。";
+      }
     }),
   );
   unlisteners.push(
@@ -373,8 +378,16 @@ function clearNativeEvents(): void {
 onMounted(async () => {
   try {
     shell.value = await invoke<ShellSnapshot>("shell_snapshot");
+  } catch (error) {
+    shellFailure.value = normalizeError(error);
+  }
+
+  try {
     await bindNativeEvents();
     await loadInitialPack();
+    if (shellFailure.value && pack.value) {
+      status.value = `窗口状态暂不可用，恢复控制仍可使用：${shellFailure.value.message}`;
+    }
   } catch (error) {
     clearNativeEvents();
     loadingOperations.clear();

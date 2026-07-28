@@ -1,10 +1,9 @@
 mod behavior;
+pub mod diagnostics;
 pub mod pet_pack_store;
 pub mod window_recovery;
 
 use std::{
-    fmt::Write as _,
-    fs,
     path::PathBuf,
     sync::Mutex,
     time::{SystemTime, UNIX_EPOCH},
@@ -12,6 +11,7 @@ use std::{
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use behavior::{BehaviorStep, PreviewBehavior};
+use diagnostics::{DiagnosticsPetPack, DiagnosticsSnapshot, write_diagnostics};
 use oh_my_pets_domain::{
     AtlasManifest, LoadedPetPack, PetManifest, PetPackSummary, ValidationIssue, load_pet_pack,
 };
@@ -324,58 +324,27 @@ fn export_diagnostics_inner(app: &AppHandle, state: &AppState) -> Result<PathBuf
         .map_err(|error| CommandError::shell(error.to_string()))?
         .as_secs();
 
-    let mut report = String::new();
-    let _ = writeln!(report, "# Oh My Pets 诊断摘要");
-    let _ = writeln!(report);
-    let _ = writeln!(report, "- 应用版本：{}", app.package_info().version);
-    let _ = writeln!(
-        report,
-        "- 平台：{} {}",
-        std::env::consts::OS,
-        std::env::consts::ARCH
-    );
-    let _ = writeln!(report, "- 点击穿透：{}", shell.click_through);
-    let _ = writeln!(report, "- 始终置顶：{}", shell.always_on_top);
-    let _ = writeln!(
-        report,
-        "- 所有工作区可见：{}",
-        shell.visible_on_all_workspaces
-    );
-    if let Some(pack) = pet_pack.pack.as_ref() {
-        let _ = writeln!(
-            report,
-            "- 宠物包：{} {}（{} 个动作，{} 个图集帧）",
-            pack.summary.display_name,
-            pack.summary.version,
-            pack.summary.action_count,
-            pack.summary.frame_count
-        );
-    } else {
-        let _ = writeln!(report, "- 宠物包：未加载");
-    }
-    for issue in &pet_pack.issues {
-        let _ = writeln!(
-            report,
-            "- 宠物包问题：[{}] {}：{}",
-            issue.code, issue.path, issue.message
-        );
-    }
-    let _ = writeln!(report);
-    let _ = writeln!(report, "## 已知平台约束");
-    let _ = writeln!(report);
-    let _ = writeln!(
-        report,
-        "macOS 透明 WebView 的整窗点击穿透与系统级文件拖放不能同时工作。"
-    );
-
     let output_dir = app
         .path()
         .app_log_dir()
         .map_err(|error| CommandError::shell(error.to_string()))?;
-    fs::create_dir_all(&output_dir).map_err(|error| CommandError::shell(error.to_string()))?;
-    let output = output_dir.join(format!("oh-my-pets-diagnostics-{timestamp}.md"));
-    fs::write(&output, report).map_err(|error| CommandError::shell(error.to_string()))?;
-    Ok(output)
+    let diagnostic = DiagnosticsSnapshot {
+        app_version: app.package_info().version.to_string(),
+        platform: std::env::consts::OS.to_string(),
+        architecture: std::env::consts::ARCH.to_string(),
+        click_through: shell.click_through,
+        always_on_top: shell.always_on_top,
+        visible_on_all_workspaces: shell.visible_on_all_workspaces,
+        pet_pack: pet_pack.pack.as_ref().map(|pack| DiagnosticsPetPack {
+            display_name: pack.summary.display_name.clone(),
+            version: pack.summary.version.clone(),
+            action_count: pack.summary.action_count,
+            frame_count: pack.summary.frame_count,
+        }),
+        pet_pack_issues: pet_pack.issues,
+    };
+    write_diagnostics(&output_dir, timestamp, &diagnostic)
+        .map_err(|error| CommandError::shell(error.to_string()))
 }
 
 #[tauri::command]

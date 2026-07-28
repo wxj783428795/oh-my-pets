@@ -7,13 +7,15 @@
     "dev": "tauri dev",
     "dev:web": "vite",
     "build": "tauri build",
-    "build:web": "vue-tsc --noEmit && vite build",
+    "build:web": "vue-tsc --noEmit && pnpm build:web:assets",
+    "build:web:assets": "vite build",
     "test": "pnpm test:rust && pnpm test:web",
     "test:rust": "cargo test --workspace",
     "test:web": "vitest run",
     "lint": "pnpm lint:rust && pnpm lint:web",
     "lint:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
     "lint:web": "vue-tsc --noEmit",
+    "verify": "pnpm test && pnpm lint && pnpm build:web:assets",
     "format": "cargo fmt --all && prettier --write ."
   },
   "dependencies": {

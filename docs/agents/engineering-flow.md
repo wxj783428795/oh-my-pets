@@ -37,6 +37,8 @@
 - `grill-with-docs` 到 `to-tickets` 应保持在同一未中断的上下文中；每张实施 ticket 再使用新的上下文，避免把规划阶段的隐含假设带入实现。
 - 实施按可验证的小切片推进，默认采用 red-green-refactor 的 TDD 循环。
 - 自动化测试、格式检查、lint 和构建只证明机器可检查的部分，不能替代 ticket 要求的人工体验验收。
+- 最后一次相关改动完成后，正式主线必须运行根目录 `pnpm verify`。任何后续相关改动都会使已有结果失效，必须重跑后才能进入 review 或提交。
+- 最终交接和 ticket 验证证据必须记录 `pnpm verify` 的实际结果；不能用更早的局部检查替代最终改动后的关闭检查。
 - 当前 ticket 的人工 QA 属于该 ticket 的完成条件，不能另建一张 QA ticket 来规避未完成的验收。
 - 验证发现的独立缺陷应建立 bug ticket；会阻塞当前验收的缺陷必须记录为 blocker，当前 ticket 保持 `claimed`。
 

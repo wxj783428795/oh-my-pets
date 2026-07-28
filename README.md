@@ -23,10 +23,10 @@ pnpm dev
 常用检查：
 
 ```bash
-pnpm test
-pnpm lint
-pnpm build:web
+pnpm verify
 ```
+
+`pnpm verify` 会依次运行完整测试、lint 和 WebView 构建，用于关闭最终改动。
 
 ## 当前范围
 

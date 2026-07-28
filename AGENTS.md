@@ -19,6 +19,7 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 - `pnpm test`：运行 Rust workspace 和前端全部测试。
 - `pnpm lint`：运行 Rust 格式检查、Clippy 和前端类型检查。
 - `pnpm build:web`：执行前端类型检查并构建 WebView 资源。
+- `pnpm verify`：按顺序运行测试、lint 和 WebView 构建，作为最终改动后的统一关闭检查。
 - `pnpm build`：调用 Tauri 构建；正式发布打包仍不在 macOS 预览版当前范围内。
 
 当前仅有一个 throwaway 桌宠壳样机位于 `.scratch/oh-my-pets-p0-alpha/prototypes/desktop-shell-smoke/`，使用 Tauri 2 + Rust + pnpm；从仓库根目录可用 `pnpm --dir .scratch/oh-my-pets-p0-alpha/prototypes/desktop-shell-smoke tauri dev` 启动。该样机只用于回答 `03-prototype-cross-platform-shell`，不代表正式主线工具链。
@@ -32,6 +33,7 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 - 多会话或范围较大的工作在实施前必须依次形成 spec 和可领取 tickets；明确的小型单会话改动可在澄清并确定验收标准后直接实施。
 - 对已经 ticket 化的工作，修改产品代码前必须将当前 ticket 设为 `claimed`，并在新的实施上下文中读取 ticket、spec、`CONTEXT.md` 和相关 ADR。
 - 实施默认按 TDD 小切片推进；自动化检查不能替代 ticket 要求的人工验收。
+- 最后一次相关改动后必须运行 `pnpm verify`；后续再次修改相关文件会使该结果失效，提交前必须重跑。
 - 提交前必须完成 Standards + Spec 双轴 code review，并处理所有阻塞性发现。
 - 人工验收、review 或提交记录缺失时，ticket 必须保持 `claimed`，不得标记为 `resolved`。
 - 任何流程例外都需要用户明确批准，并记录在 ticket 的 `## Comments` 中。

@@ -738,6 +738,31 @@ describe("预览工作台恢复", () => {
     invoke.mockClear();
   });
 
+  it("通过 Rust 桥接导出诊断摘要并展示本地路径", async () => {
+    invoke
+      .mockResolvedValueOnce({
+        clickThrough: false,
+        alwaysOnTop: true,
+        visibleOnAllWorkspaces: true,
+      })
+      .mockResolvedValueOnce(createPack())
+      .mockResolvedValueOnce("/tmp/oh-my-pets-diagnostics.md");
+    const wrapper = mount(App);
+    await flushPromises();
+
+    const exportButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().includes("导出诊断摘要"));
+    expect(exportButton).toBeDefined();
+    await exportButton!.trigger("click");
+    await flushPromises();
+
+    expect(invoke).toHaveBeenCalledWith("export_diagnostics");
+    expect(wrapper.text()).toContain("/tmp/oh-my-pets-diagnostics.md");
+    expect(wrapper.text()).toContain("诊断摘要已写入本地日志目录");
+    wrapper.unmount();
+  });
+
   it("通过 Rust 桌宠壳收起窗口并显示失败状态", async () => {
     const wrapper = mount(App);
     invoke.mockReset();
@@ -759,6 +784,39 @@ describe("预览工作台恢复", () => {
 describe("启动错误恢复", () => {
   afterEach(() => {
     invoke.mockReset();
+  });
+
+  it("壳层快照失败后仍绑定原生监听并加载宠物包", async () => {
+    invoke
+      .mockRejectedValueOnce({
+        code: "shell.snapshot-failed",
+        message: "无法读取窗口状态",
+        details: [],
+      })
+      .mockResolvedValueOnce(createPack());
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(nativeListen).toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledWith("current_pet_pack");
+    expect(wrapper.find(".pack-stats").exists()).toBe(true);
+    expect(wrapper.text()).toContain(
+      "窗口状态暂不可用，恢复控制仍可使用：无法读取窗口状态",
+    );
+
+    eventListeners.get("shell-state")!({
+      payload: {
+        clickThrough: true,
+        alwaysOnTop: true,
+        visibleOnAllWorkspaces: true,
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).not.toContain("窗口状态暂不可用");
+    expect(wrapper.text()).toContain("窗口状态已恢复");
+    wrapper.unmount();
   });
 
   it("原生监听注册中途失败时清理已注册监听并显示错误", async () => {
