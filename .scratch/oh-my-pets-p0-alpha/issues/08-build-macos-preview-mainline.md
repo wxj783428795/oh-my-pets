@@ -1,7 +1,7 @@
 # 搭建 macOS 预览版主线最小骨架
 
 Type: task
-Status: claimed
+Status: resolved
 
 ## Question
 
@@ -9,6 +9,7 @@ Status: claimed
 
 ## Comments
 
+- 2026-07-28：正式主线实现已使用中文提交 `搭建 macOS 预览版主线骨架` 提交，提交为 `8ad7fc4030ae14ce90bf3bc93233e1a2675b8a1e`。自动验证、人工验收、Standards + Spec 双轴 review 和提交记录均已完成，本票按 Definition of Done 关闭为 `resolved`。
 - 2026-07-28：第十轮 Standards + Spec 双轴 review 同时通过，两轴阻塞项均为 `0`。Standards 确认第九轮四项阻塞均已关闭，未发现新的安全、正确性、资源、生命周期或异步入口问题；Spec 确认 revision loading、图像格式真实性、actions 轻量快照和监听失败恢复均符合范围，scope creep 为 `0`。非阻塞遗留为 `App.vue`/`src-tauri/src/lib.rs` 职责偏多与轻微加载流程重复、未知嵌套非关键字段未完整保留、非方形画布视觉拉伸风险；不阻塞当前 macOS 预览版最小主线。
 - 2026-07-28：按第九轮 Standards 四项 findings 完成逐切片修复。revision loading 测试先证明较新 `2.0.0` 已挂载但旧按钮请求未返回时行为入口仍禁用，再用 operation ID 集合让已接受 revision 只保留自身加载操作，旧操作完成不再影响 loading。伪装图集测试先证明名为 `atlas.png` 的 1×1 GIF 被错误作为 `image/png` 加载，再以字节签名和扩展名对应的 `ImageType` 双重校验拒绝。Store 测试先因缺少 `behavior_actions` 无法编译，再让行为 IPC 只克隆声明式 actions，不再克隆图集字节。监听注册测试先同时证明首个 unlisten 调用为 `0` 且 mounted hook 未处理拒绝，再改为逐项即时入栈、失败/卸载统一清理，并在工作台展示启动错误、结束 loading。
 - 2026-07-28：本轮修复后 `pnpm test` 通过：Rust `23` 项、前端 `28` 项，共 `51` 项；`pnpm lint`、`pnpm build:web` 和领域层 `x86_64-pc-windows-msvc` 的 `cargo check --tests` 全部通过。仍需重新执行双轴 review，本票保持 `claimed`。
@@ -127,6 +128,6 @@ Status: claimed
 - [x] 在本地窗口中人工验证启动、宠物包摘要、行为时间线和 PixiJS 预览。
 - [x] 人工验证菜单栏召回、重置位置、关闭点击穿透、重新加载宠物包和诊断导出。
 - [x] 完成 Standards + Spec 双轴 code review，并处理阻塞性发现。
-- [ ] 使用中文提交信息形成正式提交，并把提交记录写回本票。
+- [x] 使用中文提交信息形成正式提交，并把提交记录写回本票。
 
 当前实现结果保留，但在上述门槛完成前，本票不表示“macOS 预览版最小主线骨架”已经关闭，更不表示完整首发宠物内容、正式安装包、Windows 壳或双平台外部 Alpha 已完成。

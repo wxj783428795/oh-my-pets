@@ -1,7 +1,7 @@
 # 修复预览工作台无法收起
 
 Type: bug
-Status: claimed
+Status: resolved
 
 ## What happened
 
@@ -33,6 +33,7 @@ Status: claimed
 
 ## Comments
 
+- 2026-07-28：修复已包含在中文正式提交 `8ad7fc4030ae14ce90bf3bc93233e1a2675b8a1e`（`搭建 macOS 预览版主线骨架`）中。自动验证、人工复验、双轴 review 与提交记录均已完成，本票关闭为 `resolved`。
 - 2026-07-28：本票随 Issue 08 的第十轮正式主线快照完成 Standards + Spec 双轴 review，两轴阻塞项均为 `0`；自动验证和人工复验此前已通过。当前只剩中文正式提交及提交记录，完成前保持 `claimed`。
 - 2026-07-28：人工复验通过。用户确认应用右上角“收起”现在可以隐藏预览工作台，随后左键点击菜单栏“卷”可恢复窗口。自动化与人工行为一致；本票仍待双轴 review 和正式提交，因此保持 `claimed`。
 - 2026-07-28：按已确认 seam 完成 red/green。Red：`pnpm exec vitest run src/ui/App.test.ts` 中新增用例稳定失败于 `hide_preview_window` 调用次数为 `0`，原拖动用例继续通过。Green：新增 Rust 桌宠壳隐藏命令并让应用按钮调用该命令、捕获错误后，目标文件 `2` 项测试通过。随后 `pnpm test` 通过 Rust `8` 项、前端 `4` 项，共 `12` 项；`pnpm lint` 与 `pnpm build:web` 通过。当前仍待应用按钮隐藏与菜单栏召回的人工复验。

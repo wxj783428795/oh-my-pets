@@ -11,7 +11,7 @@
 - 交付标准是可供真实外部用户独立下载安装试用的 Alpha。
 - P0 只包含一只原创 2D 宠物和标准化宠物包导入，产品完全本地优先。
 - 每个会话应参考 `CONTEXT.md`，并按需使用 `/grilling`、`/domain-modeling` 或 `/prototype`。
-- 截至 2026-07-28，本地图的规划与低成本验证结论已经收口；正式实现已通过独立的 `Issue 08` 进入，最小主线骨架已经实现，但人工验收、双轴 review 和正式提交尚未完成。
+- 截至 2026-07-28，本地图的规划与低成本验证结论已经收口；正式实现已通过独立的 `Issue 08` 完成 macOS 预览版最小主线骨架，并完成自动验证、人工验收、双轴 review 和中文正式提交 `8ad7fc4030ae14ce90bf3bc93233e1a2675b8a1e`。
 
 ## Decisions so far
 
@@ -22,11 +22,11 @@
 - [定义首发宠物内容与动画清单](./issues/06-define-first-pet-content.md) — 首发内容锁定为一只原创短腿橘白猫，以约 `86` 帧动作覆盖陪伴循环和两个可分享的招牌动作。
 - [确定外部 Alpha 的发布、权限与恢复策略](./issues/05-define-alpha-distribution-strategy.md) — 先做 `macOS 预览版`，再以双平台门槛进入真正的 `外部 Alpha`；当前不把未验证的 Windows 能力包装成可发布承诺。
 - [设计外部 Alpha 的验证与反馈闭环](./issues/07-define-alpha-validation-loop.md) — 先用 `8–12` 名 macOS 用户完成预览版闭环，再补 Windows 11 样本进入双平台外部 Alpha。
-- [搭建 macOS 预览版主线最小骨架](./issues/08-build-macos-preview-mainline.md) — 已建立 Rust 领域层、Tauri 壳、Vue/PixiJS 工作台、示例宠物包链路和最低恢复能力；当前状态为 `claimed`，仍需完成人工验收、双轴 review 和正式提交。
+- [搭建 macOS 预览版主线最小骨架](./issues/08-build-macos-preview-mainline.md) — 已建立 Rust 领域层、Tauri 壳、Vue/PixiJS 工作台、示例宠物包链路和最低恢复能力；自动验证、人工验收、双轴 review 与正式提交均已完成，状态为 `resolved`。
 
 ## Next Frontier
 
-- 当前 frontier 是完成 `Issue 08` 已定义的人工验收、双轴 review 和正式提交。窗口恢复 QA 发现的独立缺陷已登记为 `Issue 09` 与 `Issue 10`：前者需要再次人工复现，后者已收窄为菜单栏状态项被当前内建屏幕刘海遮挡。两张 bug 票都是 `Issue 08` 的 blocker，不是用来规避该票人工验收的独立 QA ticket；后续功能工作仍需先建立独立 ticket。
+- `Issue 08`、窗口隐藏修复 `Issue 09` 和菜单栏入口诊断 `Issue 10` 均已关闭，当前没有已领取的实施 frontier。后续功能工作需要按工程流程先澄清范围，并在需要时形成新的 spec 与可领取 ticket；不得直接把 Windows 壳、正式发布或完整首发内容并入已关闭的 macOS 预览版票。
 
 ## Not yet specified
 
