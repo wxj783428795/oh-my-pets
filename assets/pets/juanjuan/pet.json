@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "id": "juanjuan-cat",
+  "version": "0.1.0",
+  "displayName": "卷卷",
+  "description": "一只安静、好奇、偶尔有点笨拙的短腿橘白猫。",
+  "author": {
+    "name": "Oh My Pets"
+  },
+  "minAppVersion": "0.1.0",
+  "renderer": "sprite-atlas-v1",
+  "canvas": {
+    "width": 320,
+    "height": 320
+  },
+  "atlasPath": "atlas.json",
+  "layout": {
+    "baseline": {
+      "x": 160,
+      "y": 292
+    },
+    "hitbox": {
+      "x": 54,
+      "y": 32,
+      "width": 212,
+      "height": 260
+    },
+    "dropZone": {
+      "x": 86,
+      "y": 112,
+      "width": 148,
+      "height": 132
+    },
+    "bubbleAnchor": {
+      "x": 160,
+      "y": 24
+    }
+  },
+  "actions": {
+    "intro": {
+      "loop": false,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 900
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "land",
+          "timeMs": 120
+        }
+      ]
+    },
+    "idle": {
+      "loop": true,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 1800
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "blink",
+          "timeMs": 900
+        }
+      ]
+    },
+    "walk_left": {
+      "loop": true,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 480
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "step-1",
+          "timeMs": 240
+        }
+      ]
+    },
+    "walk_right": {
+      "loop": true,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 480
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "step-1",
+          "timeMs": 240
+        }
+      ]
+    },
+    "sleep": {
+      "loop": true,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 2400
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "settle",
+          "timeMs": 240
+        }
+      ]
+    },
+    "drag_hold": {
+      "loop": true,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 600
+        }
+      ],
+      "cuePoints": []
+    },
+    "fall": {
+      "loop": true,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 180
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "drop",
+          "timeMs": 40
+        }
+      ]
+    },
+    "land": {
+      "loop": false,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 320
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "impact",
+          "timeMs": 80
+        }
+      ]
+    },
+    "tap_react": {
+      "loop": false,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 620
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "react",
+          "timeMs": 120
+        }
+      ]
+    },
+    "feed_react": {
+      "loop": false,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 1100
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "sniff",
+          "timeMs": 180
+        },
+        {
+          "name": "grab",
+          "timeMs": 720
+        }
+      ]
+    },
+    "curious": {
+      "loop": true,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 1200
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "sniff",
+          "timeMs": 480
+        }
+      ]
+    },
+    "edge_play": {
+      "loop": true,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 1200
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "peek",
+          "timeMs": 640
+        }
+      ]
+    },
+    "quiet_idle": {
+      "loop": true,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 2600
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "slow-blink",
+          "timeMs": 1300
+        }
+      ]
+    },
+    "rare_1": {
+      "loop": false,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 1800
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "grab",
+          "timeMs": 420
+        },
+        {
+          "name": "crumple",
+          "timeMs": 1100
+        }
+      ]
+    },
+    "rare_2": {
+      "loop": false,
+      "frames": [
+        {
+          "ref": "placeholder",
+          "durationMs": 1800
+        }
+      ],
+      "cuePoints": [
+        {
+          "name": "slip",
+          "timeMs": 360
+        },
+        {
+          "name": "catch",
+          "timeMs": 1040
+        }
+      ]
+    }
+  }
+}
+

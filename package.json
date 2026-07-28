@@ -1,0 +1,41 @@
+{
+  "name": "oh-my-pets",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "dev:web": "vite",
+    "build": "tauri build",
+    "build:web": "vue-tsc --noEmit && vite build",
+    "test": "pnpm test:rust && pnpm test:web",
+    "test:rust": "cargo test --workspace",
+    "test:web": "vitest run",
+    "lint": "pnpm lint:rust && pnpm lint:web",
+    "lint:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "lint:web": "vue-tsc --noEmit",
+    "format": "cargo fmt --all && prettier --write ."
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "pixi.js": "^8.0.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/node": "^22.0.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "@vue/test-utils": "^2.4.11",
+    "jsdom": "^30.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.6.3",
+    "vite": "^7.0.0",
+    "vitest": "^3.0.0",
+    "vue-tsc": "^3.0.0"
+  },
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  }
+}
