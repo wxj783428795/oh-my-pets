@@ -9,9 +9,12 @@ import { desktopExecutablePath } from "./desktop-qa.mjs";
 export const DEVELOPMENT_PORT = 1420;
 export const RECOVERY_GUIDE = "docs/desktop-recovery.md";
 
-const MINIMUM_NODE_VERSION = Object.freeze([22, 12, 0]);
-const MINIMUM_PNPM_MAJOR = 10;
+const REQUIRED_NODE_VERSION = Object.freeze([22, 14, 0]);
+const REQUIRED_PNPM_VERSION = Object.freeze([10, 27, 0]);
+const REQUIRED_RUST_VERSION = Object.freeze([1, 97, 1]);
 const DEPENDENCY_MANIFEST_PATHS = Object.freeze([
+  ".node-version",
+  "rust-toolchain.toml",
   "package.json",
   "pnpm-lock.yaml",
   "Cargo.toml",
@@ -25,11 +28,6 @@ function commandOutput(result) {
   return result.stdout.trim() || result.stderr.trim();
 }
 
-function majorVersion(output) {
-  const match = output.match(/\bv?(\d+)(?:\.\d+){1,2}\b/);
-  return match ? Number(match[1]) : null;
-}
-
 function semanticVersion(output) {
   const match = output.match(/\bv?(\d+)\.(\d+)(?:\.(\d+))?\b/);
   return match
@@ -37,17 +35,12 @@ function semanticVersion(output) {
     : null;
 }
 
-function isVersionBefore(output, minimumVersion) {
+function isVersionDifferent(output, requiredVersion) {
   const currentVersion = semanticVersion(output);
-  if (!currentVersion) {
-    return true;
-  }
-  for (let index = 0; index < minimumVersion.length; index += 1) {
-    if (currentVersion[index] !== minimumVersion[index]) {
-      return currentVersion[index] < minimumVersion[index];
-    }
-  }
-  return false;
+  return (
+    !currentVersion ||
+    currentVersion.some((part, index) => part !== requiredVersion[index])
+  );
 }
 
 function check(id, status, detail, next) {
@@ -61,8 +54,7 @@ async function versionCheck({
   command,
   args,
   label,
-  minimumMajor,
-  minimumVersion,
+  requiredVersion,
   next,
 }) {
   const result = await probes.run(command, args, { cwd: repositoryRoot });
@@ -70,14 +62,11 @@ async function versionCheck({
   if (!result.ok) {
     return check(id, "fail", `${label} 不可用`, next);
   }
-  if (
-    (minimumMajor && majorVersion(output) < minimumMajor) ||
-    (minimumVersion && isVersionBefore(output, minimumVersion))
-  ) {
+  if (requiredVersion && isVersionDifferent(output, requiredVersion)) {
     return check(
       id,
       "fail",
-      `${label} 版本过旧：${output || "无法识别版本"}`,
+      `${label} 版本不符合仓库约束：${output || "无法识别版本"}`,
       next,
     );
   }
@@ -275,8 +264,8 @@ export async function diagnoseRepository({ repositoryRoot, probes }) {
       command: "node",
       args: ["--version"],
       label: "Node",
-      minimumVersion: MINIMUM_NODE_VERSION,
-      next: `安装 Node 22.12 或更高版本；详见 ${RECOVERY_GUIDE}#依赖缺失`,
+      requiredVersion: REQUIRED_NODE_VERSION,
+      next: `使用 .node-version 声明的 Node 22.14.0（项目最低约束 Node 22.12+）；详见 ${RECOVERY_GUIDE}#依赖缺失`,
     }),
     await versionCheck({
       probes,
@@ -285,8 +274,8 @@ export async function diagnoseRepository({ repositoryRoot, probes }) {
       command: "pnpm",
       args: ["--version"],
       label: "pnpm",
-      minimumMajor: MINIMUM_PNPM_MAJOR,
-      next: `corepack enable pnpm；详见 ${RECOVERY_GUIDE}#依赖缺失`,
+      requiredVersion: REQUIRED_PNPM_VERSION,
+      next: `corepack prepare pnpm@10.27.0 --activate；详见 ${RECOVERY_GUIDE}#依赖缺失`,
     }),
     await versionCheck({
       probes,
@@ -295,7 +284,8 @@ export async function diagnoseRepository({ repositoryRoot, probes }) {
       command: "rustc",
       args: ["--version"],
       label: "rustc",
-      next: `${RECOVERY_GUIDE}#tauri-前置条件`,
+      requiredVersion: REQUIRED_RUST_VERSION,
+      next: `使用 rust-toolchain.toml 声明的 Rust 1.97.1；详见 ${RECOVERY_GUIDE}#tauri-前置条件`,
     }),
     await versionCheck({
       probes,
@@ -304,7 +294,8 @@ export async function diagnoseRepository({ repositoryRoot, probes }) {
       command: "cargo",
       args: ["--version"],
       label: "Cargo",
-      next: `${RECOVERY_GUIDE}#tauri-前置条件`,
+      requiredVersion: REQUIRED_RUST_VERSION,
+      next: `使用 rust-toolchain.toml 声明的 Rust 1.97.1；详见 ${RECOVERY_GUIDE}#tauri-前置条件`,
     }),
     await rustCoverageCheck({ probes, repositoryRoot }),
     await versionCheck({

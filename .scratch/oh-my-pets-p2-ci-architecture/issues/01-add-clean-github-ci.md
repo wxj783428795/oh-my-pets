@@ -1,7 +1,7 @@
 # 增加干净环境复现与 GitHub CI
 
 Type: task
-Status: open
+Status: claimed
 Closeout-Contract: v1
 Blocked by: none
 
@@ -45,6 +45,16 @@ Blocked by: none
 
 - 2026-07-29：用户确认实施 P2-01；当前仓库无 remote、本机无 `gh` CLI。
   owner 与 remote 创建仍需用户确认，不能把未运行 workflow 记录为通过。
+- 2026-07-29 15:35:08 CST：在独立 worktree 的
+  `codex/p2-01-github-ci` 分支领取；实施基线为
+  `65da6b3ba76f33eae231aabccb89243ce739aba6`。
+- 2026-07-29 15:54:35 CST：仓库侧实现完成。契约测试先以缺少工具链声明、
+  根命令和 workflow 的 4 个失败建立红灯，再补固定版本、clean bootstrap、
+  最终 verify workflow 与 doctor 校验。`pnpm ci:bootstrap` 和首次本地
+  `pnpm verify` 通过；Standards 初审发现需额外阻断 `pull_request_target`、
+  写权限、coverage/schedule 夹带并固定 required check job 名，已补测试。
+  Spec 仓库侧无阻塞发现；真实 GitHub 首跑与 branch protection 仍待用户确认
+  owner/private remote，因此本票保持 `claimed`。
 
 ## Closeout Evidence
 

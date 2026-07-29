@@ -11,6 +11,8 @@ import {
 
 const repositoryRoot = "/repo";
 const healthyPaths = [
+  ".node-version",
+  "rust-toolchain.toml",
   "package.json",
   "pnpm-lock.yaml",
   "node_modules/.modules.yaml",
@@ -161,6 +163,32 @@ describe("只读 doctor", () => {
     expect(checks.node).toMatchObject({ status: "fail" });
     expect(checks.node.detail).toContain("v22.11.0");
     expect(checks.node.next).toContain("Node 22.12");
+    expect(doctorExitCode(report)).toBe(1);
+  });
+
+  test("本机工具链偏离仓库固定版本时失败并指向受控声明", async () => {
+    const report = await diagnoseRepository({
+      repositoryRoot,
+      probes: fixture({
+        commands: {
+          "node --version": successful("v22.15.0"),
+          "pnpm --version": successful("10.28.0"),
+          "rustc --version": successful("rustc 1.98.0 (fixture)"),
+          "cargo --version": successful("cargo 1.98.0 (fixture)"),
+        },
+      }),
+    });
+    const checks = checksById(report);
+
+    expect(checks.node).toMatchObject({ status: "fail" });
+    expect(checks.node.next).toContain(".node-version");
+    expect(checks.pnpm).toMatchObject({ status: "fail" });
+    expect(checks.pnpm.next).toContain("pnpm@10.27.0");
+    expect(checks.rustc).toMatchObject({ status: "fail" });
+    expect(checks.rustc.next).toContain("rust-toolchain.toml");
+    expect(checks.cargo).toMatchObject({ status: "fail" });
+    expect(checks.cargo.next).toContain("rust-toolchain.toml");
+    expect(report.summary.fail).toBe(4);
     expect(doctorExitCode(report)).toBe(1);
   });
 

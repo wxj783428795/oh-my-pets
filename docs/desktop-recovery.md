@@ -14,7 +14,7 @@ doctor 默认只读，只检查平台、工具版本、可选 Rust coverage 工�
 
 ## Tauri 前置条件
 
-macOS 正式开发环境需要 Node 22.12+、pnpm 10+、Rust/Cargo、仓库内 Tauri CLI，以及可由 `xcode-select -p` 定位的 Xcode Command Line Tools。Node 下限同时满足 Oxlint 的运行时约束。缺少 Rust 时按 Rust 官方方式安装稳定工具链，再重新运行 `pnpm doctor:desktop`；缺少 Xcode 工具时由开发者主动运行系统安装流程，doctor 不代为安装。
+macOS 正式开发环境使用 `.node-version` 固定的 Node 22.14.0、`packageManager` 固定的 pnpm 10.27.0、`rust-toolchain.toml` 固定的 Rust/Cargo 1.97.1、仓库内 Tauri CLI，以及可由 `xcode-select -p` 定位的 Xcode Command Line Tools。Node 的项目最低引擎约束仍是 22.12，固定 patch 版本用于让本机、worktree 和 CI 的结果一致。缺少 Rust 时按 Rust 官方方式安装仓库声明的工具链，再重新运行 `pnpm doctor:desktop`；缺少 Xcode 工具时由开发者主动运行系统安装流程，doctor 不代为安装。
 
 Windows 仍是产品目标平台，但当前票不扩张 Windows 实机验收。Windows 开发者需人工确认 Rust 使用 MSVC target，并已安装 Microsoft C++ Build Tools 与 WebView2 Runtime；确认后先运行 `pnpm doctor:desktop`，再用 `pnpm build:desktop` 验证真实链路。非 macOS/Windows 平台只能用于部分工程检查，不能作为桌面验收环境。
 
@@ -44,9 +44,11 @@ git status --short
 
 保留尚未提交的本地编辑，再从当前提交或协调线程恢复缺失文件；不要用安装命令伪造 manifest 或 lockfile，也不要直接覆盖有改动的文件。
 
-只有依赖清单完整但 `node_modules/.modules.yaml` 缺失时，且 Node/pnpm 版本满足要求，开发者才可明确选择运行：
+只有依赖清单完整但 `node_modules/.modules.yaml` 缺失时，且 Node/pnpm 版本与仓库声明一致，开发者才可明确选择运行：
 
 ```bash
+corepack enable
+corepack prepare pnpm@10.27.0 --activate
 pnpm install --frozen-lockfile
 ```
 

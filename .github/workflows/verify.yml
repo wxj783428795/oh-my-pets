@@ -1,0 +1,56 @@
+name: 最终验证
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: macOS ARM64 最终验证
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: 安装固定 Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+
+      - name: 启用固定 pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.27.0 --activate
+          pnpm --version
+
+      - name: 启用固定 Rust
+        run: |
+          rustup show active-toolchain
+          rustc --version
+          cargo --version
+
+      - name: 从干净环境执行最终验证
+        run: pnpm ci:verify
+
+      - name: 上传失败诊断
+        if: failure() && !cancelled()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: verify-failure-${{ github.run_id }}
+          path: |
+            target/playwright/results
+            target/playwright/report
+            target/desktop-smoke
+          if-no-files-found: ignore
+          retention-days: 3

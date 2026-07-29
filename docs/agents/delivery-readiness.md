@@ -9,6 +9,8 @@
 | `pnpm lint:web`        | 非 type-aware Oxlint 静态分析与 `vue-tsc` 类型检查              | 否                   |
 | `pnpm test:e2e`        | 真实 Chromium 中的 Canvas 视觉比较与有限 Web/UI E2E             | 否                   |
 | `pnpm coverage`        | 生成 Vitest 与 Rust 文本摘要、范围清单和本地 HTML，不设阈值     | 否                   |
+| `pnpm ci:bootstrap`    | 干净 checkout 的 frozen install 与固定 Chromium 安装            | 否                   |
+| `pnpm ci:verify`       | `ci:bootstrap` 后执行最终 `pnpm verify`                         | 是，供干净环境与 CI  |
 | `pnpm verify:core`     | 范围检查、Rust/Vitest、视觉/E2E、lint、WebView 构建             | 否                   |
 | `pnpm verify`          | `verify:core`、真实 `tauri build`、resolved ticket 关闭证据扫描 | 是                   |
 | `pnpm qa:desktop:auto` | 构建真实 Tauri 应用并执行自动 smoke                             | 仅桌面自动化部分     |
@@ -22,6 +24,10 @@
 该套件是 Web/UI 与 renderer E2E：浏览器测试 seam 只提供固定 Tauri command 输入，不运行 Rust backend、WKWebView、菜单栏、透明窗口合成或操作系统交互。因此它不重复也不替代 `pnpm qa:desktop:auto` 和 `pnpm qa:desktop`。
 
 `pnpm coverage:web` 使用 Vitest/V8 报告 `src/ui/` 与 `scripts/` 中的正式源码，并显式排除只在浏览器测试模式加载的 `src/ui/browser-test-platform.ts`；`pnpm coverage:rust` 使用 `cargo-llvm-cov` 报告两个 workspace crate 的 `src/`。两条命令都会机械检查范围清单，拒绝测试、测试 seam、生成代码、prototype、research、reference 或构建产物混入。聚合入口 `pnpm coverage` 只生成可解释基线，不设置阈值，也不替代或进入 `pnpm verify`。文本摘要直接输出到终端；JSON 与 HTML 位于 `target/coverage/web/` 和 `target/coverage/rust/`，首次基线与盲区见 `docs/coverage-baseline.md`。
+
+`.node-version`、`packageManager` 和 `rust-toolchain.toml` 分别固定 Node 22.14.0、pnpm 10.27.0 与 Rust/Cargo 1.97.1。`pnpm ci:bootstrap` 只从锁文件恢复 Node 依赖并安装与固定 Playwright 版本匹配的 Chromium；`pnpm ci:verify` 随后执行完整 `pnpm verify`，不得缩短为 `verify:core` 或更新视觉基线。
+
+`.github/workflows/verify.yml` 只响应 pull request、`main` push 和手动触发，运行于标准 GitHub-hosted `macos-latest` ARM64 runner。workflow 使用只读仓库权限、30 分钟 timeout 和按 PR/分支取消旧运行的 concurrency；不包含矩阵、coverage、发布、签名或部署，只在失败时上传 `target/playwright/` 与桌面 smoke 诊断并保留 3 天。Actions 均固定到已审阅提交 SHA。GitHub 首次真实运行通过前，本机 `pnpm ci:verify` 只能证明 clean bootstrap 契约，不能冒充远端通过；`main` required check 也只能在真实 job 名稳定后配置，并应要求分支为最新提交。
 
 `pnpm qa:desktop:auto` 的报告写入被 Git 忽略的 `target/desktop-smoke/report.json`，覆盖：
 

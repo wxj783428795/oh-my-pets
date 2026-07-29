@@ -6,15 +6,17 @@ Oh My Pets 是一个使用 Tauri 2、Rust、Vue 3 与 PixiJS 构建的桌面宠�
 
 环境要求：
 
-- Rust stable
-- Node.js 22.12+
-- pnpm 10+
+- Rust/Cargo 1.97.1（由 `rust-toolchain.toml` 固定）
+- Node.js 22.14.0（由 `.node-version` 固定，项目最低引擎约束为 22.12）
+- pnpm 10.27.0（由 `packageManager` 固定）
 - macOS 14+ Apple Silicon
 
 从仓库根目录启动真正的 Tauri 主线：
 
 ```bash
-pnpm install
+corepack enable
+corepack prepare pnpm@10.27.0 --activate
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
@@ -33,6 +35,14 @@ pnpm test:e2e:install
 ```
 
 浏览器下载物进入被 Git 忽略的 `target/playwright-browsers/`。日常比较使用 `pnpm test:e2e`；只有确需更新且准备人工审阅基线时才运行 `pnpm test:e2e:update`。确定性输入、失败产物和原生桌面 QA 边界见 [PixiJS 视觉验证与有限 Web E2E](docs/visual-testing.md)。
+
+干净 checkout 或 CI 使用：
+
+```bash
+pnpm ci:verify
+```
+
+该命令先执行 frozen install 和固定 Chromium 安装，再运行完整 `pnpm verify`。GitHub workflow 在 pull request、`main` push 和手动触发时使用标准 macOS ARM64 runner 复验该入口；不运行 coverage、发布或平台矩阵，仅在失败时保留 3 天诊断产物。远端首次启用和 `main` required check 必须以真实 GitHub 运行结果为准，不能用本机结果替代。
 
 只检查前端静态分析与类型时运行：
 
