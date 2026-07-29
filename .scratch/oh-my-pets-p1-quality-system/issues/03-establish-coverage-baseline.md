@@ -1,7 +1,7 @@
 # 建立 Vitest 与 Rust 覆盖率基线
 
 Type: task
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: none
 
@@ -40,33 +40,43 @@ Blocked by: none
 
 - 2026-07-29：用户确认先建立报告基线、不设硬百分比；当前保持 `open`，等待独立实施上下文领取。
 - 2026-07-29 12:21:21 +0800：在独立 worktree 的 `codex/p1-03-coverage-baseline` 分支领取；基线为 `main` 的 `39b2daf000fb1630666dd852b2a695bb600452aa`。
+- 2026-07-29 12:41:39 +0800：实现、真实 Web/Rust/聚合覆盖率运行、最终 verify、双轴 review 和中文实现提交均已完成；交互式桌面 QA 因无产品界面或桌面行为变更而不适用。
 
 ## Closeout Evidence
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: 最后相关改动后通过正式范围检查、Rust workspace 测试、86 项 Web 测试、Rust fmt/Clippy、Oxlint、`vue-tsc`、Web 构建、真实 Tauri release 构建和 closeout 扫描。
 
 ### Manual QA
 
-- Status: pending
-- Command: pending
-- Result: pending
-- Reason: pending
+- Status: not-applicable
+- Command: `pnpm qa:desktop`
+- Result: 未执行交互式桌面 QA；真实 Tauri release 构建已由最终 `pnpm verify` 通过。
+- Reason: 本票只增加工程覆盖率命令、范围/失败反馈测试和质量文档，不改变产品 UI、资源、窗口、托盘、点击穿透或诊断行为，没有可供桌面人工体验验收的新行为。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: Standards review 无发现；Spec review 初次发现 doctor 未检查 `llvm-tools-preview` 的阻塞项，已用红灯 fixture 修复并由原 reviewer 复核关闭，无剩余阻塞或 scope creep。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: b40327d7d731efc82834c0d8e5c37dc9388cd353
 
 ## Answer
 
-待实施。
+已增加 `pnpm coverage:web`、`pnpm coverage:rust` 与聚合 `pnpm coverage`。Web 使用 Vitest 3.2.7 和固定的 `@vitest/coverage-v8` 3.2.7；Rust 使用 `cargo-llvm-cov` 0.8.7，并在缺少它或 `llvm-tools-preview` 时于测试前清晰失败。只读 doctor 会检查两项可选 Rust coverage 前置条件，缺失时只 warning。
+
+两类报告都会输出终端摘要并机械校验正式源码范围。Web JSON/HTML 位于 `target/coverage/web/`，Rust JSON/HTML 位于 `target/coverage/rust/`，原始 profile 位于 `target/llvm-cov-target/`；首次运行所需的本地 coverage 工具也隔离在 `target/`，所有生成物均处于 P0 本地输出边界。
+
+2026-07-29 的首次真实聚合基线为：
+
+- Vitest/V8：Statements 与 Lines 71.49%（1462/2045），Branches 80.31%（310/386），Functions 86.17%（81/94）。
+- Rust：Regions 45.77%（990/2163），Lines 46.72%（740/1584），Functions 40.88%（65/159）；稳定 branch 模式未启用，记为不适用。
+
+完整环境、版本、命令与盲区记录在 `docs/coverage-baseline.md`。当前没有覆盖率阈值，命令未接入 `pnpm verify`；macOS arm64 单机基线、真实 GUI 生命周期和 Rust 稳定 branch 指标仍是明确盲区。
