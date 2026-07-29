@@ -38,6 +38,24 @@
   },
   "overrides": [
     {
+      "files": [
+        "src/ui/**/*.ts",
+        "src/ui/**/*.vue",
+        "scripts/**/*.mjs",
+        "vite.config.ts",
+        "playwright.config.ts"
+      ],
+      "excludeFiles": [
+        "src/ui/**/*.test.ts",
+        "src/ui/browser-test-platform.ts",
+        "scripts/**/*.test.mjs"
+      ],
+      "rules": {
+        "complexity": ["error", 20],
+        "import/no-cycle": "error"
+      }
+    },
+    {
       "files": ["src/ui/**/*.ts", "src/ui/**/*.vue"],
       "env": {
         "browser": true,

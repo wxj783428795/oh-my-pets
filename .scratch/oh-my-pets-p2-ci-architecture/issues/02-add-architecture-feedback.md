@@ -1,7 +1,7 @@
 # 增加模块规模、复杂度与依赖边界反馈
 
 Type: task
-Status: open
+Status: claimed
 Closeout-Contract: v1
 Blocked by: none
 
@@ -49,6 +49,20 @@ Blocked by: none
   `src/pet-domain/src/validation.rs` 约 1070 行、`src-tauri/src/lib.rs` 约
   727 行、`src/ui/App.vue` 约 631 行和 `scripts/lib/doctor.mjs` 约 419 行；
   这些数字只用于规划首次基线，不是预设失败阈值。
+- 2026-07-29 16:02:49 CST：在独立 worktree 的
+  `codex/p2-02-architecture` 分支领取；实施基线为
+  `a3e28076b7593f3766914e3f332cc3cc654d9a32`。
+- 2026-07-29 16:22:29 CST：先以缺少分析模块建立红灯，再为范围污染、空范围、
+  前端循环、Rust 禁止方向、仓库外 workspace、分析器失败及真实
+  Oxlint/Clippy 复杂度违规补测试。首次命令还被分析器自身的
+  `preserve-caught-error` 规则阻断，已保留 cause 后转绿。
+- 2026-07-29 16:22:29 CST：Standards review 收紧 Cargo stdout/stderr
+  解析、与 cwd/locale 无关的发现和排序、仓库外成员拒绝，以及失败前清除旧报告
+  和原子写入；Spec review 将 Oxlint override 与 Clippy lib/bin 严格限制在正式
+  源码，测试与 browser seam 不进入复杂度门禁。复审均 0 阻塞。
+- 2026-07-29 16:22:29 CST：当前确定性基线为 35 个模块、5626 物理 LOC、
+  Web 内部边 20、Rust 允许边 1、循环 0、禁止方向 0；模块分组只报告不设
+  百分比或行数关闭条件。
 
 ## Closeout Evidence
 

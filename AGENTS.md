@@ -29,10 +29,11 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 - `pnpm coverage:web`：使用 Vitest 3.2.7 与固定版本的 V8 provider 运行前端/工程脚本测试，输出文本摘要，并把 JSON 范围清单与 HTML 写入 `target/coverage/web/`。
 - `pnpm coverage:rust`：使用 `cargo-llvm-cov` 运行 Rust workspace 全 targets 测试，输出文本摘要，并把 JSON 范围清单与 HTML 写入 `target/coverage/rust/`；缺少工具时会给出固定版本的全局或 worktree 本地安装选项。
 - `pnpm coverage`：依次运行 Web 与 Rust 覆盖率入口；当前只报告基线，不设置百分比门禁，也不属于 `pnpm verify`。
+- `pnpm architecture:check`：对正式源码生成模块物理 LOC、热点分组、前端内部 import 图和 Rust workspace 依赖图，并运行 Oxlint 圈复杂度/循环依赖与 Clippy 认知复杂度；JSON 写入 `target/quality/architecture/report.json`，循环、禁止方向、范围污染或分析器失败会阻断，模块规模分组只作 review 信号。
 - `pnpm lint`：运行 Rust 格式检查、Clippy，以及前端 Oxlint 静态分析和类型检查。
 - `pnpm lint:web`：先用普通、非 type-aware 的 Oxlint 检查 `src/ui`、`scripts`、`tests/e2e` 和根 Vite/Playwright 配置，再运行 `vue-tsc --noEmit`；Oxlint 负责快速代码规则反馈，`vue-tsc` 继续负责 Vue/TypeScript 类型检查。Oxlint 当前只检查 Vue `<script>`，不覆盖 template 专用规则。
 - `pnpm build:web`：执行前端类型检查并构建 WebView 资源。
-- `pnpm verify:core`：运行正式范围检查、Rust/Vitest 测试、真实浏览器视觉与有限 E2E、lint 和 WebView 构建，供快速开发反馈使用，不等价于关闭检查。
+- `pnpm verify:core`：运行正式范围与架构检查、Rust/Vitest 测试、真实浏览器视觉与有限 E2E、lint 和 WebView 构建，供快速开发反馈使用，不等价于关闭检查。
 - `pnpm verify`：在 `verify:core` 后执行真实 Tauri 桌面构建与 resolved ticket 关闭证据扫描，是最终改动后的统一关闭检查。
 - `pnpm build` / `pnpm build:desktop`：调用真实 Tauri 构建；正式发布打包仍不在 macOS 预览版当前范围内。
 - `pnpm build:desktop:qa`：仅为真实 macOS 人工 QA 构建带品牌图标的本地 `.app`，不等价于正式发布打包。
@@ -70,6 +71,8 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 ## 测试约定
 
 新增功能应同时补充测试。Rust 集成测试放在对应 crate 的 `tests/`，单元测试可使用 `#[cfg(test)]`；Vitest 前端单元测试使用 `*.test.ts` 并靠近被测模块，Playwright 浏览器 E2E 使用 `tests/e2e/*.spec.ts` 并把稳定 expected 基线放在同名 `*-snapshots/`。如果暂时无法覆盖，请在 PR 描述中说明风险和后续计划。
+
+架构反馈的正式范围、首次热点、阈值语义与盲区见 `docs/architecture-baseline.md`。禁止为了降低 LOC 或复杂度数字进行无关拆分，也禁止用全局规则关闭换取绿色；模块拆分必须能说明职责、依赖或变更成本上的收益。
 
 ## 提交与合并请求
 

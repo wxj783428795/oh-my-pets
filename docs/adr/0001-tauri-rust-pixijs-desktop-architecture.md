@@ -18,3 +18,5 @@ P0 采用 Tauri 2 桌面壳、Rust 共享核心和双平台原生窗口适配器
 ## Consequences
 
 macOS 通过 `tauri-nspanel` 和必要 AppKit 调用实现窗口能力，Windows 通过 `windows-rs` 调用 Win32/DWM。WebView/PixiJS 必须通过既定启动、CPU、内存、帧耗时和稳定性门槛；优化后仍不达标时，保留 Rust 核心、事件协议与平台适配器，仅将宠物渲染器替换为 `wgpu`。P0 只发布 macOS 14+ Apple Silicon 与 Windows 11 x86_64 安装包。
+
+Rust workspace 的依赖方向固定为桌面壳可以依赖 `oh-my-pets-domain`，领域 crate 不得反向依赖 `oh-my-pets`。前端与工程模块不得形成内部 import 循环。`pnpm architecture:check` 机械检查这些边界，并以 Oxlint/Clippy 提供函数复杂度回退信号；模块 LOC 只用于发现 review 热点，不作为本 ADR 的架构正确性判据。

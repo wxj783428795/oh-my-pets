@@ -52,6 +52,14 @@ pnpm lint:web
 
 该命令先用非 type-aware Oxlint 检查正式前端、工程脚本、Web E2E 和根 Vite/Playwright 配置，再运行 `vue-tsc --noEmit`。Oxlint 提供快速代码规则反馈，`vue-tsc` 保留 Vue/TypeScript 类型检查职责；Vue template 专用规则暂不在 Oxlint 覆盖范围内。
 
+查看模块规模、内部依赖和复杂度反馈时运行：
+
+```bash
+pnpm architecture:check
+```
+
+确定性 JSON 位于 `target/quality/architecture/report.json`。循环依赖、Rust 领域层反向依赖桌面壳、范围污染或分析器失败会阻断；LOC 热点分组只用于 review，不以任意行数阈值强制重构。首次结果和盲区见 [架构反馈基线](docs/architecture-baseline.md)。
+
 桌面验收分层执行：
 
 ```bash
