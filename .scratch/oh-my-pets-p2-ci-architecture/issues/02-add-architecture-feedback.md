@@ -1,7 +1,7 @@
 # 增加模块规模、复杂度与依赖边界反馈
 
 Type: task
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: none
 
@@ -63,33 +63,42 @@ Blocked by: none
 - 2026-07-29 16:22:29 CST：当前确定性基线为 35 个模块、5626 物理 LOC、
   Web 内部边 20、Rust 允许边 1、循环 0、禁止方向 0；模块分组只报告不设
   百分比或行数关闭条件。
+- 2026-07-29 16:24:00 CST：实现提交为
+  `5bcf2b063888f62c7b3288a7f37e3dad0499114a`。
 
 ## Closeout Evidence
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: 最后相关改动后通过；架构报告 35 个模块/5626 LOC、Rust 26 项、
+  Vitest 111 项、Chromium 2 项、Oxlint/vue-tsc、Web 构建、真实 Tauri release
+  build 与 closeout 均通过。
 
 ### Manual QA
 
-- Status: pending
+- Status: not-applicable
 - Command: `not-applicable`
-- Result: pending
-- Reason: pending
+- Result: 本票未改变任何用户界面或原生桌面行为。
+- Reason: 仅增加工程分析器、静态规则、机器报告和文档；不涉及窗口、托盘、
+  点击穿透、诊断交互或视觉输出。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: Standards 初审发现 cwd/locale、Cargo stderr、仓库外 workspace 和旧报告
+  原子性问题，Spec 初审发现 Oxlint/Clippy 超出正式源码范围，均已修复；最终
+  Standards 0、Spec 0。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: `5bcf2b063888f62c7b3288a7f37e3dad0499114a`
 
 ## Answer
 
-待实施。
+已增加确定性架构反馈：模块规模和热点分组只作 review 信号；前端循环、Rust
+workspace 循环、`domain -> desktop shell` 禁止方向、范围污染和分析器失败均为
+硬门禁，稳定检查已进入 `verify:core`。
