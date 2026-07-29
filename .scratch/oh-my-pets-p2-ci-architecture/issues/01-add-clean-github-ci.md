@@ -1,7 +1,7 @@
 # 增加干净环境复现与 GitHub CI
 
 Type: task
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: none
 
@@ -55,33 +55,55 @@ Blocked by: none
   写权限、coverage/schedule 夹带并固定 required check job 名，已补测试。
   Spec 仓库侧无阻塞发现；真实 GitHub 首跑与 branch protection 仍待用户确认
   owner/private remote，因此本票保持 `claimed`。
+- 2026-07-29 16:59:11 CST：用户确认 owner 为 `wxj783428795`，并在私有仓库
+  首跑受 Billing 阻断后明确批准改为公开仓库。已创建并启用
+  `wxj783428795/oh-my-pets`，PR #1 的真实 Actions 首次执行暴露 checkout
+  默认浅历史导致 closeout 无法定位历史提交，已用 `fetch-depth: 0` 修复。
+- 2026-07-29 16:59:11 CST：Standards review 进一步发现 GitHub PR merge
+  commit 会让默认 `scope:check` 得到空范围；已改为
+  `diff-tree -m --first-parent`，并用真实分叉/merge Git 仓库回归测试阻断。
+  最终 Standards 与 Spec 复审均 0 findings。
+- 2026-07-29 16:59:11 CST：提交
+  `66acd23fec3953c3c8f469ba6bfa4f65528254cc` 的真实 GitHub Actions run
+  `30437064362` 通过。`main` required check 已精确绑定 GitHub Actions app
+  的 `macOS ARM64 最终验证`，启用 `strict: true` 与管理员强制，关闭强推和
+  分支删除。
 
 ## Closeout Evidence
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: 最后相关代码改动后通过；Rust 26 项、Vitest 103 项、Chromium 2 项、
+  Oxlint/vue-tsc、Web 构建、真实 Tauri release build 与 closeout 均通过。
+  GitHub Actions run `30437064362` 在 `macos-26-arm64` 干净 runner 上对最新
+  提交完成 `pnpm ci:verify` 并通过。
 
 ### Manual QA
 
-- Status: pending
+- Status: not-applicable
 - Command: `not-applicable`
-- Result: pending
-- Reason: pending
+- Result: 本票未改变用户界面、视觉输出或原生桌面行为。
+- Reason: 仅增加工具链声明、干净安装、CI workflow、范围门禁、契约测试和工程
+  文档；不涉及窗口、托盘、点击穿透、诊断交互或桌面体验。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: Standards 初审发现 workflow 安全/成本约束、浅历史 closeout 和 PR
+  merge commit 空范围问题，均已修复并补回归测试；最终 Standards 0、
+  Spec 0。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: `66acd23fec3953c3c8f469ba6bfa4f65528254cc`
 
 ## Answer
 
-待实施。
+已增加固定工具链、clean bootstrap 和最小权限 GitHub Actions 最终验证入口；
+公开仓库的真实 macOS ARM64 run 已通过，`main` required check 已要求 GitHub
+Actions 的最新成功提交。workflow 无矩阵、无 coverage/发布，仅在失败时短期
+保留诊断产物。
