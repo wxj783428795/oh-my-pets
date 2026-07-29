@@ -11,6 +11,28 @@ const contract = JSON.parse(
 export const AUTOMATED_DESKTOP_CHECKS = Object.freeze(contract.automatedChecks);
 export const MANUAL_DESKTOP_CHECKS = Object.freeze(contract.manualItems);
 
+export function desktopExecutablePath({
+  repositoryRoot,
+  platform,
+  manualMode,
+}) {
+  if (platform === "darwin" && manualMode) {
+    return resolve(
+      repositoryRoot,
+      "target",
+      "release",
+      "bundle",
+      "macos",
+      "Oh My Pets.app",
+      "Contents",
+      "MacOS",
+      "oh-my-pets",
+    );
+  }
+  const binaryName = platform === "win32" ? "oh-my-pets.exe" : "oh-my-pets";
+  return resolve(repositoryRoot, "target", "release", binaryName);
+}
+
 export function validateDesktopSmokeReport(report) {
   const errors = [];
   if (!report || typeof report !== "object") {

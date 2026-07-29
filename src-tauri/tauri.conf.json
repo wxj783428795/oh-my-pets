@@ -32,7 +32,7 @@
     }
   },
   "bundle": {
-    "active": false
+    "active": false,
+    "icon": ["icons/icon.icns"]
   }
 }
-

@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import {
   AUTOMATED_DESKTOP_CHECKS,
+  desktopExecutablePath,
+  MANUAL_DESKTOP_CHECKS,
   manualQaPassed,
   manualQaPlatformError,
   validateDesktopSmokeReport,
@@ -50,6 +52,31 @@ describe("桌面 smoke 报告", () => {
     expect(manualQaPlatformError("darwin")).toBeNull();
     expect(manualQaPlatformError("linux")).toBe(
       "真实桌面人工 QA 仅支持 macOS（darwin），当前平台为 linux",
+    );
+  });
+
+  test("macOS 人工 QA 从带图标的 app bundle 启动", () => {
+    expect(
+      desktopExecutablePath({
+        repositoryRoot: "/repo",
+        platform: "darwin",
+        manualMode: true,
+      }),
+    ).toBe(
+      "/repo/target/release/bundle/macos/Oh My Pets.app/Contents/MacOS/oh-my-pets",
+    );
+    expect(
+      desktopExecutablePath({
+        repositoryRoot: "/repo",
+        platform: "darwin",
+        manualMode: false,
+      }),
+    ).toBe("/repo/target/release/oh-my-pets");
+  });
+
+  test("人工验收明确区分单帧工程包与首发逐帧动画", () => {
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认示例宠物可见，运行最小时间线后语义动作状态持续切换（当前单帧占位资源不验收逐帧动画）",
     );
   });
 

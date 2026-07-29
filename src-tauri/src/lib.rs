@@ -20,9 +20,9 @@ use oh_my_pets_domain::{
     AtlasManifest, LoadedPetPack, PetManifest, PetPackSummary, ValidationIssue, load_pet_pack,
 };
 use pet_pack_store::PetPackStore;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{
-    AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewWindow,
+    AppHandle, Emitter, Listener, Manager, PhysicalPosition, State, WebviewWindow,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
@@ -126,6 +126,7 @@ struct AppState {
     shell: Mutex<ShellSnapshot>,
     pet_pack: PetPackStore,
     behavior: Mutex<PreviewBehavior>,
+    frontend_smoke: Mutex<Option<FrontendSmokeStatus>>,
 }
 
 impl Default for AppState {
@@ -134,8 +135,16 @@ impl Default for AppState {
             shell: Mutex::new(ShellSnapshot::default()),
             pet_pack: PetPackStore::default(),
             behavior: Mutex::new(PreviewBehavior::default()),
+            frontend_smoke: Mutex::new(None),
         }
     }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FrontendSmokeStatus {
+    loaded: bool,
+    detail: String,
 }
 
 fn main_window(app: &AppHandle) -> Result<WebviewWindow, CommandError> {
@@ -568,6 +577,29 @@ fn run_desktop_smoke(app: &AppHandle) -> DesktopSmokeReport {
         Err(error) => report.fail("example_pet_pack_loaded", error.message),
     }
 
+    let frontend_deadline = std::time::Instant::now() + Duration::from_secs(5);
+    let frontend_status = loop {
+        let current = state
+            .frontend_smoke
+            .lock()
+            .ok()
+            .and_then(|status| status.clone());
+        if current.is_some() || std::time::Instant::now() >= frontend_deadline {
+            break current;
+        }
+        thread::sleep(Duration::from_millis(50));
+    };
+    match frontend_status {
+        Some(status) if status.loaded => {
+            report.pass("frontend_pet_mounted", status.detail);
+        }
+        Some(status) => report.fail("frontend_pet_mounted", status.detail),
+        None => report.fail(
+            "frontend_pet_mounted",
+            "前端在 5 秒内未报告 PixiJS 宠物挂载结果",
+        ),
+    }
+
     let hidden = handle_tray_menu(app, MENU_HIDE)
         .and_then(|_| {
             thread::sleep(Duration::from_millis(100));
@@ -657,6 +689,16 @@ pub fn run() {
         .manage(AppState::default())
         .setup(|app| {
             let handle = app.handle().clone();
+            let frontend_handle = handle.clone();
+            app.listen("frontend-smoke-status", move |event| {
+                let Ok(status) = serde_json::from_str::<FrontendSmokeStatus>(event.payload())
+                else {
+                    return;
+                };
+                if let Ok(mut current) = frontend_handle.state::<AppState>().frontend_smoke.lock() {
+                    *current = Some(status);
+                }
+            });
             let window = main_window(&handle).map_err(|error| error.message)?;
             window.set_always_on_top(true)?;
             window.set_visible_on_all_workspaces(true)?;

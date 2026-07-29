@@ -25,8 +25,9 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 - `pnpm verify:core`：运行正式范围检查、测试、lint 和 WebView 构建，供快速开发反馈使用，不等价于关闭检查。
 - `pnpm verify`：在 `verify:core` 后执行真实 Tauri 桌面构建与 resolved ticket 关闭证据扫描，是最终改动后的统一关闭检查。
 - `pnpm build` / `pnpm build:desktop`：调用真实 Tauri 构建；正式发布打包仍不在 macOS 预览版当前范围内。
+- `pnpm build:desktop:qa`：仅为真实 macOS 人工 QA 构建带品牌图标的本地 `.app`，不等价于正式发布打包。
 - `pnpm qa:desktop:auto`：构建并启动真实 Tauri 可执行文件，执行可自动化的最小桌面 smoke。
-- `pnpm qa:desktop`：先执行自动 smoke，再在真实 macOS 桌面启动交互式人工 QA；非交互环境不能把它记录为通过。
+- `pnpm qa:desktop`：构建并启动带图标的本地 macOS `.app`，先执行自动 smoke，再进入交互式人工 QA；非交互环境不能把它记录为通过。
 - `pnpm closeout:check`：扫描 resolved ticket 的结构化关闭证据；传入 `-- --ticket <path>` 可检查单票是否已具备关闭条件。
 - `pnpm scope:check`：拒绝把 prototype、research、reference 或本地生成物混入正式主线关闭范围。
 

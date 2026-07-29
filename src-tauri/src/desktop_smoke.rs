@@ -109,7 +109,10 @@ mod tests {
         assert_eq!(json["schemaVersion"], 1);
         assert_eq!(json["passed"], true);
         assert_eq!(json["manualQaRequired"], true);
-        assert_eq!(json["checks"].as_array().map(Vec::len), Some(5));
+        assert_eq!(
+            json["checks"].as_array().map(Vec::len),
+            Some(contract().automated_checks.len())
+        );
         assert!(
             json["manualItems"]
                 .as_array()

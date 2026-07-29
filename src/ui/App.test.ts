@@ -10,41 +10,40 @@ const {
   dragDropListeners,
   eventListeners,
   invoke,
+  nativeEmit,
   nativeListen,
   rendererClear,
   rendererMount,
   rendererPlay,
   startDragging,
 } = vi.hoisted(() => ({
-    dragDropListeners: [] as Array<
-      (event: {
-        payload: { type: string; paths?: string[] };
-      }) => void
-    >,
-    eventListeners: new Map<string, (event: { payload: unknown }) => void>(),
-    invoke: vi.fn(() => new Promise(() => undefined)),
-    nativeListen: vi.fn(
-      (
-        event: string,
-        listener: (event: { payload: unknown }) => void,
-      ): Promise<() => void> => {
-        eventListeners.set(event, listener);
-        return Promise.resolve(() => eventListeners.delete(event));
-      },
-    ),
-    rendererClear: vi.fn(),
-    rendererMount: vi.fn(() => Promise.resolve()),
-    rendererPlay: vi.fn((_action: string, _holdMs: number) =>
-      Promise.resolve(),
-    ),
-    startDragging: vi.fn(() => Promise.resolve()),
-  }));
+  dragDropListeners: [] as Array<
+    (event: { payload: { type: string; paths?: string[] } }) => void
+  >,
+  eventListeners: new Map<string, (event: { payload: unknown }) => void>(),
+  invoke: vi.fn(() => new Promise(() => undefined)),
+  nativeEmit: vi.fn(() => Promise.resolve()),
+  nativeListen: vi.fn(
+    (
+      event: string,
+      listener: (event: { payload: unknown }) => void,
+    ): Promise<() => void> => {
+      eventListeners.set(event, listener);
+      return Promise.resolve(() => eventListeners.delete(event));
+    },
+  ),
+  rendererClear: vi.fn(),
+  rendererMount: vi.fn(() => Promise.resolve()),
+  rendererPlay: vi.fn((_action: string, _holdMs: number) => Promise.resolve()),
+  startDragging: vi.fn(() => Promise.resolve()),
+}));
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke,
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
+  emit: nativeEmit,
   listen: nativeListen,
 }));
 
@@ -98,6 +97,8 @@ afterEach(() => {
       return Promise.resolve(() => eventListeners.delete(event));
     },
   );
+  nativeEmit.mockReset();
+  nativeEmit.mockResolvedValue(undefined);
   rendererClear.mockReset();
   rendererMount.mockReset();
   rendererMount.mockResolvedValue(undefined);
@@ -816,6 +817,49 @@ describe("启动错误恢复", () => {
 
     expect(wrapper.text()).not.toContain("窗口状态暂不可用");
     expect(wrapper.text()).toContain("窗口状态已恢复");
+    wrapper.unmount();
+  });
+
+  it("宠物挂载完成后向桌面 smoke 报告前端状态", async () => {
+    invoke
+      .mockResolvedValueOnce({
+        clickThrough: false,
+        alwaysOnTop: true,
+        visibleOnAllWorkspaces: true,
+      })
+      .mockResolvedValueOnce(createPack());
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(nativeEmit).toHaveBeenCalledWith("frontend-smoke-status", {
+      loaded: true,
+      detail: "Test Cat 1.2.3 已完成 PixiJS 挂载",
+    });
+    wrapper.unmount();
+  });
+
+  it("前端 smoke 失败报告不泄漏内联宠物资源", async () => {
+    invoke
+      .mockResolvedValueOnce({
+        clickThrough: false,
+        alwaysOnTop: true,
+        visibleOnAllWorkspaces: true,
+      })
+      .mockResolvedValueOnce(createPack());
+    rendererMount.mockRejectedValueOnce(
+      new Error(
+        "[Loader.load] Failed to load data:image/png;base64,AAAAAA SecurityError",
+      ),
+    );
+
+    const wrapper = mount(App);
+    await flushPromises();
+
+    expect(nativeEmit).toHaveBeenCalledWith("frontend-smoke-status", {
+      loaded: false,
+      detail: "[Loader.load] Failed to load data:<omitted> SecurityError",
+    });
     wrapper.unmount();
   });
 

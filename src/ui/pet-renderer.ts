@@ -1,3 +1,4 @@
+import "pixi.js/unsafe-eval";
 import { Application, Assets, Rectangle, Sprite, Texture } from "pixi.js";
 
 import type { PetPackPayload } from "./types";
@@ -17,6 +18,13 @@ export class PetRenderer {
   private initialized = false;
   private initializePromise: Promise<void> | null = null;
   private destroyed = false;
+
+  constructor() {
+    Assets.setPreferences({
+      preferCreateImageBitmap: false,
+      preferWorkers: false,
+    });
+  }
 
   async mount(host: HTMLElement, pack: PetPackPayload): Promise<void> {
     if (this.destroyed) {

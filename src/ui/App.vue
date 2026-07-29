@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
@@ -98,8 +98,7 @@ function claimRevision(revision: number, operation?: number): boolean {
 
 function claimFailure(failure: CommandError, operation?: number): boolean {
   return (
-    failure.revision === null ||
-    claimRevision(failure.revision, operation)
+    failure.revision === null || claimRevision(failure.revision, operation)
   );
 }
 
@@ -110,6 +109,18 @@ function showPackFailure(failure: CommandError): void {
   currentStep.value = null;
   issues.value = failure.details;
   status.value = failure.message;
+}
+
+async function reportFrontendSmoke(
+  loaded: boolean,
+  detail: string,
+): Promise<void> {
+  try {
+    const sanitizedDetail = detail.replace(/data:[^\s]+/g, "data:<omitted>");
+    await emit("frontend-smoke-status", { loaded, detail: sanitizedDetail });
+  } catch {
+    // Smoke observability must not change the product loading outcome.
+  }
 }
 
 async function mountPack(
@@ -159,12 +170,17 @@ async function loadInitialPack(): Promise<void> {
       return;
     }
     status.value = `已从正式主线加载 ${payload.summary.displayName} ${payload.summary.version}`;
+    await reportFrontendSmoke(
+      true,
+      `${payload.summary.displayName} ${payload.summary.version} 已完成 PixiJS 挂载`,
+    );
   } catch (error) {
     const failure = normalizeError(error);
     if (!claimFailure(failure, loadingOperation)) {
       return;
     }
     showPackFailure(failure);
+    await reportFrontendSmoke(false, failure.message);
   } finally {
     finishLoading(loadingOperation);
   }
@@ -395,6 +411,7 @@ onMounted(async () => {
     const failure = normalizeError(error);
     issues.value = failure.details;
     status.value = failure.message;
+    await reportFrontendSmoke(false, failure.message);
   }
 });
 
@@ -577,7 +594,9 @@ onBeforeUnmount(() => {
             </div>
             <div>
               <dt>画布</dt>
-              <dd>{{ pack.summary.canvas.width }}×{{ pack.summary.canvas.height }}</dd>
+              <dd>
+                {{ pack.summary.canvas.width }}×{{ pack.summary.canvas.height }}
+              </dd>
             </div>
           </dl>
           <div class="action-cloud" aria-label="已加载语义动作">

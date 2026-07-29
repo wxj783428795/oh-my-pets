@@ -9,6 +9,7 @@ const {
   appDestroy,
   appInit,
   assetLoad,
+  assetSetPreferences,
   assetUnload,
   destroyedSprites,
   destroyedTextures,
@@ -17,6 +18,7 @@ const {
   appDestroy: vi.fn(),
   appInit: vi.fn(() => Promise.resolve()),
   assetLoad: vi.fn(() => Promise.resolve({ source: {} })),
+  assetSetPreferences: vi.fn(),
   assetUnload: vi.fn(() => Promise.resolve()),
   destroyedSprites: [] as boolean[],
   destroyedTextures: [] as boolean[],
@@ -94,6 +96,7 @@ vi.mock("pixi.js", () => {
     Application: MockApplication,
     Assets: {
       load: assetLoad,
+      setPreferences: assetSetPreferences,
       unload: assetUnload,
     },
     Rectangle: MockRectangle,
@@ -154,11 +157,21 @@ describe("宠物动作播放", () => {
     appInit.mockResolvedValue(undefined);
     assetLoad.mockReset();
     assetLoad.mockResolvedValue({ source: {} });
+    assetSetPreferences.mockReset();
     assetUnload.mockReset();
     assetUnload.mockResolvedValue(undefined);
     destroyedSprites.length = 0;
     destroyedTextures.length = 0;
     renderedFrames.length = 0;
+  });
+
+  it("使用 WebKit 可用的图片元素路径加载内联图集", () => {
+    new PetRenderer();
+
+    expect(assetSetPreferences).toHaveBeenCalledWith({
+      preferCreateImageBitmap: false,
+      preferWorkers: false,
+    });
   });
 
   it("按动作声明决定停在末帧或循环播放", async () => {
@@ -188,7 +201,9 @@ describe("宠物动作播放", () => {
     renderedFrames.length = 0;
     assetLoad.mockRejectedValueOnce(new Error("图集加载失败"));
 
-    await expect(renderer.mount(host, createPack())).rejects.toThrow("图集加载失败");
+    await expect(renderer.mount(host, createPack())).rejects.toThrow(
+      "图集加载失败",
+    );
 
     expect(destroyedSprites).toHaveLength(1);
     expect(destroyedTextures).toHaveLength(2);
@@ -219,7 +234,10 @@ describe("宠物动作播放", () => {
         }),
     );
     const renderer = new PetRenderer();
-    const mounting = renderer.mount(document.createElement("div"), createPack());
+    const mounting = renderer.mount(
+      document.createElement("div"),
+      createPack(),
+    );
     await vi.waitFor(() => expect(assetLoad).toHaveBeenCalledOnce());
 
     resolveLoad({ source: {} });
@@ -319,7 +337,10 @@ describe("宠物动作播放", () => {
     );
     const renderer = new PetRenderer();
 
-    const mounting = renderer.mount(document.createElement("div"), createPack());
+    const mounting = renderer.mount(
+      document.createElement("div"),
+      createPack(),
+    );
     await vi.waitFor(() => expect(appInit).toHaveBeenCalledOnce());
     renderer.destroy();
     expect(appDestroy).not.toHaveBeenCalled();

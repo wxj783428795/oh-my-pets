@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 import {
+  desktopExecutablePath,
   MANUAL_DESKTOP_CHECKS,
   manualQaPassed,
   manualQaPlatformError,
@@ -17,10 +18,12 @@ const repositoryRoot = resolve(import.meta.dirname, "..");
 const outputDir = resolve(repositoryRoot, "target", "desktop-smoke");
 const automaticReportPath = resolve(outputDir, "report.json");
 const manualReportPath = resolve(outputDir, "manual-qa.json");
-const binaryName =
-  process.platform === "win32" ? "oh-my-pets.exe" : "oh-my-pets";
-const binaryPath = resolve(repositoryRoot, "target", "release", binaryName);
 const manualMode = process.argv.includes("--manual");
+const binaryPath = desktopExecutablePath({
+  repositoryRoot,
+  platform: process.platform,
+  manualMode,
+});
 
 async function runProcess(environment) {
   return await new Promise((resolveProcess, reject) => {
