@@ -22,6 +22,7 @@ Closeout-Contract: v1
 - 2026-07-29：根据用户在独立 worktree 中的明确授权创建并领取本票，范围限定为 Better Harness 报告中的三个 P0 交付就绪缺口，不扩张到 Windows 实机验收、视觉回归、覆盖率或模块重构。
 - 2026-07-29：`pnpm qa:desktop:auto` 已使用 release Tauri 可执行文件通过启动、示例宠物加载、托盘处理器隐藏/恢复、点击穿透开关与诊断导出；真实菜单栏点击、视觉显示和点击穿透体验仍待验收人运行 `pnpm qa:desktop`。
 - 2026-07-29：Standards + Spec 双轴 review 共发现 5 个阻塞问题：`verify:core` 可冒充最终 verify、Manual QA Command 未校验、`target/` 分类错误、干净工作树范围门禁为空、人工 QA 未限制 macOS/应用存活。以上均已修复并补测试；跨语言清单重复的判断性 smell 已用共享 JSON 合同消除。
+- 2026-07-29：实现提交为 `1bda7706141e59cbd781136f8a6e7b26ad0a661b`（`补齐 P0 交付就绪门禁`）；本票因真实 macOS 人工 QA 未完成而继续保持 `claimed`。
 
 ## Closeout Evidence
 
@@ -46,11 +47,11 @@ Closeout-Contract: v1
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: 1bda7706141e59cbd781136f8a6e7b26ad0a661b
 
 ## Answer
 
 已补齐真实 Tauri 构建关闭门禁、release 应用自动桌面 smoke、交互式 macOS 人工 QA 路由、结构化 ticket closeout 守卫及正式主线范围检查。`.codex/`、`output/` 与 prototype 子树通过忽略规则隔离，research/reference 保持可见并由范围检查拒绝混入正式关闭变更，现有用户资产未被删除、移动或覆盖。
 
-自动化桌面检查已经通过；真实菜单栏点击、视觉显示和点击穿透体验仍待人工 QA，因此 ticket 保持 `claimed`。提交记录将在实现提交后回写。
+自动化桌面检查已经通过；真实菜单栏点击、视觉显示和点击穿透体验仍待人工 QA，因此 ticket 保持 `claimed`。实现提交记录已回写。
