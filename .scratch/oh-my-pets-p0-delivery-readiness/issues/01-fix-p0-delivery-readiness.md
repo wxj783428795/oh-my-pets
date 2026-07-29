@@ -34,7 +34,7 @@ Closeout-Contract: v1
 
 - Status: passed
 - Command: `pnpm verify`
-- Result: 2026-07-29 完整通过；范围检查、Rust/前端 62 项测试、fmt/Clippy、类型检查、WebView 构建、真实 Tauri release 构建与 closeout 扫描均通过
+- Result: 2026-07-29 完整通过；范围检查、Rust 26 项与前端 62 项测试、fmt/Clippy、类型检查、WebView 构建、真实 Tauri release 构建与 closeout 扫描均通过
 
 ### Manual QA
 
