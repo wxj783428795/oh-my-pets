@@ -1,7 +1,7 @@
 # 修复桌面启动后示例宠物未显示
 
 Type: bug
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 
 ## Question
@@ -32,6 +32,7 @@ Closeout-Contract: v1
 - 2026-07-29：第二轮人工 QA 发现工程包只有单帧占位资源，语义时间线正常但没有逐帧差异；按已有资源说明将 P0 人工项收敛为宠物可见与语义动作切换，不越权制作 Issue 06 的首发动画内容。
 - 2026-07-29：人工 QA 启动裸二进制时 Dock 缺少品牌图标；新增仅供 QA 的 macOS `.app` bundle 与 `icon.icns`，不改变 `pnpm verify` 的非发布构建语义。
 - 2026-07-29：最终 Standards + Spec 双轴 review 发现交付文档漏列前端挂载自动检查并已修复；复核后无正确性、安全性、测试或范围阻塞项。
+- 2026-07-29：实现提交为 `af4cbcc3203d1a8399b672added181db99e9fffc`（`修复桌面宠物启动验收`）；全部关闭证据齐备，本票标记为 `resolved`。
 
 ## Closeout Evidence
 
@@ -56,11 +57,11 @@ Closeout-Contract: v1
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: af4cbcc3203d1a8399b672added181db99e9fffc
 
 ## Answer
 
 启动失败包含两个连续根因：PixiJS 默认渲染器在严格 CSP 下使用动态求值，以及纹理加载器默认通过 `createImageBitmap`/`fetch` 读取 Rust 返回的 `data:` 图集，而 WKWebView 拒绝该操作。渲染器现预加载 Pixi 官方静态 CSP 兼容模块，并通过公开 preference 使用 `HTMLImageElement` 解码内联图集。
 
-桌面 smoke 新增 `frontend_pet_mounted` 跨 WebView 回执，只有 Vue 完成 PixiJS 挂载才通过；失败详情会脱敏内联资源。`pnpm qa:desktop` 另从带品牌图标的本地 `.app` 启动。自动 smoke 和 4/4 真实 macOS 人工 QA 已通过，ticket 等待最终验证、双轴 review 与提交记录。
+桌面 smoke 新增 `frontend_pet_mounted` 跨 WebView 回执，只有 Vue 完成 PixiJS 挂载才通过；失败详情会脱敏内联资源。`pnpm qa:desktop` 另从带品牌图标的本地 `.app` 启动。自动 smoke、4/4 真实 macOS 人工 QA、最终验证、双轴 review 与提交记录均已完成，ticket 已关闭。
