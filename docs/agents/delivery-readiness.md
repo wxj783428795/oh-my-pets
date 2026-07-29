@@ -27,7 +27,7 @@
 
 `.node-version`、`packageManager` 和 `rust-toolchain.toml` 分别固定 Node 22.14.0、pnpm 10.27.0 与 Rust/Cargo 1.97.1。`pnpm ci:bootstrap` 只从锁文件恢复 Node 依赖并安装与固定 Playwright 版本匹配的 Chromium；`pnpm ci:verify` 随后执行完整 `pnpm verify`，不得缩短为 `verify:core` 或更新视觉基线。
 
-`.github/workflows/verify.yml` 只响应 pull request、`main` push 和手动触发，运行于标准 GitHub-hosted `macos-latest` ARM64 runner。workflow 使用只读仓库权限、30 分钟 timeout 和按 PR/分支取消旧运行的 concurrency；不包含矩阵、coverage、发布、签名或部署，只在失败时上传 `target/playwright/` 与桌面 smoke 诊断并保留 3 天。Actions 均固定到已审阅提交 SHA。GitHub 首次真实运行通过前，本机 `pnpm ci:verify` 只能证明 clean bootstrap 契约，不能冒充远端通过；`main` required check 也只能在真实 job 名稳定后配置，并应要求分支为最新提交。
+`.github/workflows/verify.yml` 只响应 pull request、`main` push 和手动触发，运行于标准 GitHub-hosted `macos-latest` ARM64 runner。workflow 使用只读仓库权限、30 分钟 timeout 和按 PR/分支取消旧运行的 concurrency；checkout 获取完整 Git 历史，供 closeout 验证已记录的实现提交；不包含矩阵、coverage、发布、签名或部署，只在失败时上传 `target/playwright/` 与桌面 smoke 诊断并保留 3 天。Actions 均固定到已审阅提交 SHA。GitHub 首次真实运行通过前，本机 `pnpm ci:verify` 只能证明 clean bootstrap 契约，不能冒充远端通过；`main` required check 也只能在真实 job 名稳定后配置，并应要求分支为最新提交。
 
 `pnpm qa:desktop:auto` 的报告写入被 Git 忽略的 `target/desktop-smoke/report.json`，覆盖：
 

@@ -2,6 +2,17 @@ function normalize(path) {
   return path.replaceAll("\\", "/").replace(/^\.\/+/, "");
 }
 
+export const DEFAULT_HEAD_DIFF_ARGUMENTS = Object.freeze([
+  "diff-tree",
+  "--no-commit-id",
+  "--name-only",
+  "-r",
+  "-m",
+  "--first-parent",
+  "-z",
+  "HEAD",
+]);
+
 export function classifyRepositoryPath(path) {
   const value = normalize(path);
 

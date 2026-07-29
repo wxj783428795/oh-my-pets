@@ -62,6 +62,7 @@ describe("干净环境与 GitHub CI 契约", () => {
     expect(workflow).toContain(
       "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
     );
+    expect(workflow).toContain("fetch-depth: 0");
     expect(workflow).toContain(
       "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
     );
