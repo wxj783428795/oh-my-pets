@@ -1,7 +1,7 @@
 # 增加 doctor 与桌面故障恢复路由
 
 Type: task
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: none
 
@@ -38,33 +38,38 @@ Blocked by: none
 - 2026-07-29：由用户确认进入 P1，当前保持 `open`，等待独立实施上下文领取。
 - 2026-07-29 11:30:14 +0800：已从当前 `main` 基线领取 P1-01，开始独立实施。
 - 2026-07-29：pnpm 10.27 的内置 `pnpm doctor` 会遮蔽同名 package script；按 completion criteria 的等价命令条款选用根命令 `pnpm doctor:desktop`。
+- 2026-07-29 11:55:13 +0800：实现、最终验证和双轴 review 已完成；实现提交为 `de2217f87eb38f6508ddb9449cf8069e7e034e28`。
 
 ## Closeout Evidence
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: Rust workspace 测试、Vitest 69 项、fmt/Clippy、Vue 类型检查、Vite 构建、真实 Tauri release 构建和 closeout 扫描全部通过。
 
 ### Manual QA
 
-- Status: pending
-- Command: pending
-- Result: pending
-- Reason: pending
+- Status: not-applicable
+- Command: not-applicable
+- Result: 未执行交互式桌面人工 QA；真实 Tauri release 构建已由 `pnpm verify` 通过。
+- Reason: 本票只新增默认只读的工程 doctor、fixture 测试和恢复文档，未修改 `src/ui`、`src-tauri`、窗口、菜单栏或其他桌面产品行为，没有可由人工桌面操作新增验证的体验面。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: Standards review 发现 manifest 缺失时仍可能泄漏安装建议，已拆分依赖状态并为 Tauri CLI/Node 依赖增加统一门控和组合 fixture；最终双轴复核均无阻塞发现。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: de2217f87eb38f6508ddb9449cf8069e7e034e28
 
 ## Answer
 
-待实施。
+已增加根命令 `pnpm doctor:desktop`；该命名避开 pnpm 10 内置 `doctor` 对同名 package script 的遮蔽。命令默认只读，按稳定顺序检查平台、Node、pnpm、Rust/Cargo、Tauri CLI 与原生前置条件、`127.0.0.1:1420`、受控依赖清单、pnpm 安装状态、恢复入口、桌面构建产物和诊断索引，并输出 `pass`/`warn`/`fail` 摘要、仓库内下一步和失败退出码。
+
+新增 `docs/desktop-recovery.md`，覆盖端口、依赖、构建、窗口、菜单栏、日志/诊断和安全清理边界；`AGENTS.md` 可直接发现入口。fixture 驱动测试覆盖健康、工具缺失、版本过旧、非正式平台、端口占用、路径缺失、组合依赖失败、稳定格式与根配置契约。真实环境最终结果为 `pass=12 warn=1 fail=0`；未生成 desktop smoke 诊断索引按设计为 warning。
+
+残余风险：Windows 的 MSVC Build Tools/WebView2 仍按本票非目标保持人工确认并输出 warning；依赖检查证明受控清单和 pnpm 安装标记可定位，不逐包校验 Cargo 缓存或 lockfile 内容完整性。
