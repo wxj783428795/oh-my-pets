@@ -9,6 +9,7 @@
 - 实施 issue 按单文件存放：`.scratch/<feature-slug>/issues/<NN>-<slug>.md`
 - issue 编号从 `01` 开始，不使用单个汇总 tickets 文件
 - issue 顶部应包含 `Status:` 行，用于记录分诊状态；状态词见 `triage-labels.md`
+- 新实施 issue 顶部应包含 `Closeout-Contract: v1`，用于启用机械关闭校验
 - 讨论记录追加在文件底部的 `## Comments` 小节下
 
 ## 当技能要求“发布到 issue tracker”时
@@ -41,6 +42,46 @@
 6. `## Answer` 或实施结果中已记录实际变更、验证证据、已知限制和遗留风险。
 
 任一条件缺失时，ticket 必须保持 `claimed`。当前 ticket 所需的人工 QA 不能拆成独立 ticket 来绕过完成条件；验收中发现的独立缺陷可以建立 bug ticket，并按是否阻塞当前验收记录依赖。
+
+## 结构化关闭证据
+
+使用 `Closeout-Contract: v1` 的实施 ticket 必须包含以下结构；值必须是实际结果，不能保留 `pending`：
+
+```markdown
+## Closeout Evidence
+
+### Verify
+
+- Status: passed
+- Command: `pnpm verify`
+- Result: <实际结果>
+
+### Manual QA
+
+- Status: passed
+- Command: `pnpm qa:desktop`
+- Result: <实际结果或报告路径>
+- Reason: <not-applicable 时必填>
+
+### Review
+
+- Standards: passed
+- Spec: passed
+- Notes: <阻塞发现及处理结果>
+
+### Commit
+
+- Status: committed
+- Hash: <7-40 位 Git commit hash>
+```
+
+人工 QA 确实不适用时，`Status` 可写 `not-applicable`，但 `Result` 和 `Reason` 都必须解释客观边界。准备关闭单票时运行：
+
+```bash
+pnpm closeout:check -- --ticket .scratch/<feature>/issues/<NN>-<slug>.md
+```
+
+不传 `--ticket` 时，命令扫描全部 resolved ticket，并由 `pnpm verify` 调用。`scripts/closeout-baseline.json` 只列出 v1 契约启用前已经 resolved 的历史票，避免伪造历史验收；新票不得加入基线来绕过 Definition of Done。
 
 ## Wayfinding 约定
 

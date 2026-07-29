@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "reason": "这些 ticket 在结构化 closeout v1 契约启用前已经 resolved；保留历史状态，不补写无法核实的证据。",
+  "tickets": [
+    ".scratch/oh-my-pets-p0-alpha/issues/01-define-p0-companion-loop.md",
+    ".scratch/oh-my-pets-p0-alpha/issues/02-decide-runtime-and-rendering-architecture.md",
+    ".scratch/oh-my-pets-p0-alpha/issues/03-prototype-cross-platform-shell.md",
+    ".scratch/oh-my-pets-p0-alpha/issues/04-define-pet-pack-boundary.md",
+    ".scratch/oh-my-pets-p0-alpha/issues/05-define-alpha-distribution-strategy.md",
+    ".scratch/oh-my-pets-p0-alpha/issues/06-define-first-pet-content.md",
+    ".scratch/oh-my-pets-p0-alpha/issues/07-define-alpha-validation-loop.md",
+    ".scratch/oh-my-pets-p0-alpha/issues/08-build-macos-preview-mainline.md",
+    ".scratch/oh-my-pets-p0-alpha/issues/09-fix-preview-window-hide.md",
+    ".scratch/oh-my-pets-p0-alpha/issues/10-restore-macos-menu-bar-entry.md"
+  ]
+}

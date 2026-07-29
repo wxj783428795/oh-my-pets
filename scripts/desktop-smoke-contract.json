@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "automatedChecks": [
+    "app_startup",
+    "example_pet_pack_loaded",
+    "window_hide_and_tray_restore",
+    "click_through_toggle",
+    "diagnostics_export"
+  ],
+  "manualItems": [
+    "确认菜单栏显示“卷”入口，左键真实点击可恢复已隐藏窗口",
+    "确认示例宠物在透明置顶窗口中正常显示和播放动作",
+    "确认开启点击穿透后桌面目标可点击，并可从菜单栏关闭点击穿透",
+    "确认导出的诊断 Markdown 可在 Finder 中定位并正常阅读"
+  ]
+}

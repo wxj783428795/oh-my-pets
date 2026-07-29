@@ -26,7 +26,16 @@ pnpm dev
 pnpm verify
 ```
 
-`pnpm verify` 会依次运行完整测试、lint 和 WebView 构建，用于关闭最终改动。
+`pnpm verify` 会依次运行正式范围检查、完整测试、lint、WebView 构建、真实 Tauri 桌面构建和 resolved ticket 关闭证据扫描，用于关闭最终改动。日常快速反馈可运行 `pnpm verify:core`，但它不能替代最终关闭检查。
+
+桌面验收分层执行：
+
+```bash
+pnpm qa:desktop:auto
+pnpm qa:desktop
+```
+
+`qa:desktop:auto` 使用构建后的真实 Tauri 可执行文件检查启动、示例宠物加载、窗口隐藏与托盘处理器恢复、点击穿透开关和诊断导出。`qa:desktop` 还要求验收人在真实 macOS 桌面确认菜单栏点击、视觉显示和点击穿透体验；非交互执行不能算作人工 QA 通过。
 
 ## 当前范围
 

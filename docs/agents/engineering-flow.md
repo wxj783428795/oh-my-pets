@@ -37,8 +37,9 @@
 - `grill-with-docs` 到 `to-tickets` 应保持在同一未中断的上下文中；每张实施 ticket 再使用新的上下文，避免把规划阶段的隐含假设带入实现。
 - 实施按可验证的小切片推进，默认采用 red-green-refactor 的 TDD 循环。
 - 自动化测试、格式检查、lint 和构建只证明机器可检查的部分，不能替代 ticket 要求的人工体验验收。
-- 最后一次相关改动完成后，正式主线必须运行根目录 `pnpm verify`。任何后续相关改动都会使已有结果失效，必须重跑后才能进入 review 或提交。
+- `pnpm verify:core` 只提供快速反馈；最后一次相关改动完成后，正式主线必须运行包含真实 Tauri 构建与 closeout 扫描的根目录 `pnpm verify`。任何后续相关改动都会使已有结果失效，必须重跑后才能进入 review 或提交。
 - 最终交接和 ticket 验证证据必须记录 `pnpm verify` 的实际结果；不能用更早的局部检查替代最终改动后的关闭检查。
+- 桌面改动先运行 `pnpm qa:desktop:auto` 获取真实 Tauri 自动 smoke 证据，再由验收人在真实 macOS 桌面运行 `pnpm qa:desktop` 完成交互项。自动 smoke 不能证明菜单栏图标真实可见、物理点击可用或视觉体验正确。
 - 当前 ticket 的人工 QA 属于该 ticket 的完成条件，不能另建一张 QA ticket 来规避未完成的验收。
 - 验证发现的独立缺陷应建立 bug ticket；会阻塞当前验收的缺陷必须记录为 blocker，当前 ticket 保持 `claimed`。
 
@@ -50,6 +51,16 @@
 - Spec review：逐项检查实现是否满足 ticket、spec、非目标和验收标准。
 
 阻塞性 review 发现必须先修复或登记为明确 blocker。随后使用中文提交信息形成可追溯提交；存在 ticket 时，还要把验证证据、review 结论和提交记录写回 ticket。只有满足 `docs/agents/issue-tracker.md` 的 Definition of Done 后，ticket 才能改为 `resolved`。
+
+新实施 ticket 使用 `Closeout-Contract: v1`。准备关闭时运行：
+
+```bash
+pnpm closeout:check -- --ticket .scratch/<feature>/issues/<NN>-<slug>.md
+```
+
+该命令会机械检查最终 verify、人工 QA 或不适用理由、双轴 review、提交哈希和 Answer。实现提交完成后可用一个独立的流程资产提交回写实现哈希；不得通过写入当前提交自身的占位哈希规避可追溯性。人工 QA 尚未完成时应如实保留 `claimed`。
+
+正式主线验证只接受产品代码、配置与 `.scratch` spec/ticket 流程资产。辅助资产和生成物边界、桌面 QA 证据位置见 `docs/agents/delivery-readiness.md`。
 
 ## 上下文与例外
 

@@ -7,4 +7,7 @@ target/
 .scratch/**/node_modules/
 .scratch/**/target/
 .scratch/**/dist/
+.scratch/**/prototypes/
 
+.codex/
+output/

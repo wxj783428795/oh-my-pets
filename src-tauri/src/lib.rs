@@ -1,16 +1,20 @@
 mod behavior;
+mod desktop_smoke;
 pub mod diagnostics;
 pub mod pet_pack_store;
 pub mod window_recovery;
 
 use std::{
+    fs,
     path::PathBuf,
     sync::Mutex,
-    time::{SystemTime, UNIX_EPOCH},
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use behavior::{BehaviorStep, PreviewBehavior};
+use desktop_smoke::{DesktopSmokeReport, requested_report_path};
 use diagnostics::{DiagnosticsPetPack, DiagnosticsSnapshot, write_diagnostics};
 use oh_my_pets_domain::{
     AtlasManifest, LoadedPetPack, PetManifest, PetPackSummary, ValidationIssue, load_pet_pack,
@@ -532,6 +536,121 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+fn run_desktop_smoke(app: &AppHandle) -> DesktopSmokeReport {
+    let mut report = DesktopSmokeReport::new(app.package_info().version.to_string());
+
+    match main_window(app) {
+        Ok(window) => match window.is_visible() {
+            Ok(true) => report.pass("app_startup", "真实 Tauri 主窗口已启动并可见"),
+            Ok(false) => report.fail("app_startup", "真实 Tauri 主窗口已启动但不可见"),
+            Err(error) => report.fail("app_startup", error.to_string()),
+        },
+        Err(error) => report.fail("app_startup", error.message),
+    }
+
+    let state = app.state::<AppState>();
+    match current_pet_pack_inner(state.inner()) {
+        Ok(payload) if payload.summary.action_count > 0 && payload.summary.frame_count > 0 => {
+            report.pass(
+                "example_pet_pack_loaded",
+                format!(
+                    "{}：{} 个动作，{} 个图集帧",
+                    payload.summary.display_name,
+                    payload.summary.action_count,
+                    payload.summary.frame_count
+                ),
+            );
+        }
+        Ok(payload) => report.fail(
+            "example_pet_pack_loaded",
+            format!("{} 缺少动作或图集帧", payload.summary.display_name),
+        ),
+        Err(error) => report.fail("example_pet_pack_loaded", error.message),
+    }
+
+    let hidden = handle_tray_menu(app, MENU_HIDE)
+        .and_then(|_| {
+            thread::sleep(Duration::from_millis(100));
+            main_window(app)
+        })
+        .and_then(|window| {
+            window
+                .is_visible()
+                .map(|visible| !visible)
+                .map_err(|error| CommandError::shell(error.to_string()))
+        });
+    let restored = handle_tray_menu(app, MENU_SHOW)
+        .and_then(|_| {
+            thread::sleep(Duration::from_millis(100));
+            main_window(app)
+        })
+        .and_then(|window| {
+            window
+                .is_visible()
+                .map_err(|error| CommandError::shell(error.to_string()))
+        });
+    match (hidden, restored) {
+        (Ok(true), Ok(true)) => report.pass(
+            "window_hide_and_tray_restore",
+            "托盘菜单处理器已隐藏并恢复真实主窗口",
+        ),
+        (hidden, restored) => report.fail(
+            "window_hide_and_tray_restore",
+            format!("隐藏结果={hidden:?}，恢复结果={restored:?}"),
+        ),
+    }
+
+    let enabled = set_click_through_inner(app, state.inner(), true);
+    let disabled = set_click_through_inner(app, state.inner(), false);
+    match (enabled, disabled) {
+        (Ok(enabled), Ok(disabled)) if enabled.click_through && !disabled.click_through => {
+            report.pass(
+                "click_through_toggle",
+                "真实窗口已开启并关闭点击穿透，最终恢复可交互状态",
+            );
+        }
+        (enabled, disabled) => report.fail(
+            "click_through_toggle",
+            format!("开启结果={enabled:?}，关闭结果={disabled:?}"),
+        ),
+    }
+
+    match export_diagnostics_inner(app, state.inner()) {
+        Ok(path) => match fs::read_to_string(&path) {
+            Ok(contents)
+                if contents.contains("# Oh My Pets 诊断摘要")
+                    && contents.contains("- 宠物包：") =>
+            {
+                report.pass("diagnostics_export", path.display().to_string());
+            }
+            Ok(_) => report.fail(
+                "diagnostics_export",
+                format!("诊断文件内容不完整：{}", path.display()),
+            ),
+            Err(error) => report.fail("diagnostics_export", error.to_string()),
+        },
+        Err(error) => report.fail("diagnostics_export", error.message),
+    }
+
+    report
+}
+
+fn schedule_desktop_smoke(app: &AppHandle, report_path: PathBuf) {
+    let handle = app.clone();
+    thread::spawn(move || {
+        thread::sleep(Duration::from_millis(500));
+        let exit_code = match run_desktop_smoke(&handle).write_to(&report_path) {
+            Ok(true) => 0,
+            Ok(false) => 1,
+            Err(error) => {
+                eprintln!("无法写入桌面 smoke 报告 {}：{error}", report_path.display());
+                1
+            }
+        };
+        handle.exit(exit_code);
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -545,6 +664,9 @@ pub fn run() {
 
             let state = app.state::<AppState>();
             let _ = reload_example_pet_pack_inner(&handle, state.inner());
+            if let Some(report_path) = requested_report_path() {
+                schedule_desktop_smoke(&handle, report_path);
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
