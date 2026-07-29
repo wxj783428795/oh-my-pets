@@ -18,6 +18,8 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 ## 构建、测试与开发命令
 
 - `pnpm doctor:desktop`：默认只读检查平台、工具链、Tauri 前置条件、开发端口、正式依赖和诊断/构建路径，并指向 `docs/desktop-recovery.md`；使用命名空间以避开 pnpm 10 内置的同名 `doctor`，且不会安装依赖、结束进程、清缓存或修改用户文件。
+- `pnpm ci:bootstrap`：面向干净 checkout 执行 frozen pnpm 安装并把固定 Playwright Chromium 安装到 `target/playwright-browsers/`；调用方必须先使用 `.node-version`、`packageManager` 和 `rust-toolchain.toml` 声明的固定工具链。
+- `pnpm ci:verify`：先运行 `ci:bootstrap`，再运行最终 `pnpm verify`；这是 GitHub Actions 的单一根入口，不用于代替日常已有依赖时的快速反馈。
 - `pnpm dev`：启动 Vite 子进程并运行真正的 Tauri 主线。
 - `pnpm dev:web`：仅启动前端开发服务器，供 Tauri 调用，不等价于桌面应用。
 - `pnpm test:e2e:install`：把与固定 Playwright 版本匹配的 Chromium 安装到被忽略的 `target/playwright-browsers/`；升级 Playwright 后需重跑。
@@ -42,6 +44,8 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 当前仅有一个 throwaway 桌宠壳样机位于 `.scratch/oh-my-pets-p0-alpha/prototypes/desktop-shell-smoke/`，使用 Tauri 2 + Rust + pnpm；从仓库根目录可用 `pnpm --dir .scratch/oh-my-pets-p0-alpha/prototypes/desktop-shell-smoke tauri dev` 启动。该样机只用于回答 `03-prototype-cross-platform-shell`，不代表正式主线工具链。
 
 根目录 `pnpm` scripts 是正式主线的唯一统一入口。
+
+`.github/workflows/verify.yml` 在 pull request、`main` push 和手动触发时使用标准 GitHub-hosted macOS ARM64 runner 执行 `pnpm ci:verify`。workflow 只授予仓库内容读取权限、取消同一 PR 的旧运行，不运行 coverage、发布或多平台矩阵，仅在失败时保留 3 天诊断产物。真实远端运行和 `main` required check 的边界见 `docs/agents/delivery-readiness.md`。
 
 `.codex/`、`output/` 和 `.scratch/**/prototypes/` 是本地生成或辅助范围，通过 `.gitignore` 隔离；`.scratch/**/spec.md`、`.scratch/**/map.md` 和 `.scratch/**/issues/*.md` 仍是正式流程资产。`research/` 与 `reference/` 保持可见但由 `pnpm scope:check` 从正式关闭范围中拒绝，不得为了清洁状态删除、移动或覆盖用户资产。完整边界见 `docs/agents/delivery-readiness.md`。
 

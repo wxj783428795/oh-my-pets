@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
 import {
+  DEFAULT_HEAD_DIFF_ARGUMENTS,
   assertFormalChangeScope,
   classifyRepositoryPath,
   selectDefaultScopePaths,
@@ -40,14 +41,7 @@ if (base) {
     ]),
   ];
 } else {
-  const headPaths = gitPathList([
-    "diff-tree",
-    "--no-commit-id",
-    "--name-only",
-    "-r",
-    "-z",
-    "HEAD",
-  ]);
+  const headPaths = gitPathList(DEFAULT_HEAD_DIFF_ARGUMENTS);
   changedPaths = selectDefaultScopePaths(workspacePaths, headPaths);
 }
 

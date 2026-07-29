@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "ci:bootstrap": "pnpm install --frozen-lockfile && pnpm test:e2e:install",
+    "ci:verify": "pnpm ci:bootstrap && pnpm verify",
     "doctor:desktop": "node scripts/doctor.mjs",
     "dev": "tauri dev",
     "dev:web": "vite",
