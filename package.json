@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "doctor:desktop": "node scripts/doctor.mjs",
     "dev": "tauri dev",
     "dev:web": "vite",
     "build": "pnpm build:desktop",

@@ -1,7 +1,7 @@
 # 增加 doctor 与桌面故障恢复路由
 
 Type: task
-Status: open
+Status: claimed
 Closeout-Contract: v1
 Blocked by: none
 
@@ -36,6 +36,8 @@ Blocked by: none
 ## Comments
 
 - 2026-07-29：由用户确认进入 P1，当前保持 `open`，等待独立实施上下文领取。
+- 2026-07-29 11:30:14 +0800：已从当前 `main` 基线领取 P1-01，开始独立实施。
+- 2026-07-29：pnpm 10.27 的内置 `pnpm doctor` 会遮蔽同名 package script；按 completion criteria 的等价命令条款选用根命令 `pnpm doctor:desktop`。
 
 ## Closeout Evidence
 

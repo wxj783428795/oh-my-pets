@@ -17,6 +17,7 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 
 ## 构建、测试与开发命令
 
+- `pnpm doctor:desktop`：默认只读检查平台、工具链、Tauri 前置条件、开发端口、正式依赖和诊断/构建路径，并指向 `docs/desktop-recovery.md`；使用命名空间以避开 pnpm 10 内置的同名 `doctor`，且不会安装依赖、结束进程、清缓存或修改用户文件。
 - `pnpm dev`：启动 Vite 子进程并运行真正的 Tauri 主线。
 - `pnpm dev:web`：仅启动前端开发服务器，供 Tauri 调用，不等价于桌面应用。
 - `pnpm test`：运行 Rust workspace 和前端全部测试。
