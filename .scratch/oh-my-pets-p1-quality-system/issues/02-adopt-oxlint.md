@@ -1,7 +1,7 @@
 # 接入 Oxlint 前端静态分析
 
 Type: task
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: none
 
@@ -40,33 +40,43 @@ Blocked by: none
 - 2026-07-29：用户确认采用“普通 Oxlint + 保留 vue-tsc”的路线；TypeScript 编译器升级另行决策，本票不得夹带。
 - 2026-07-29：当前保持 `open`，等待独立实施上下文领取。
 - 2026-07-29 11:59:59 +0800：已在独立 worktree 从 `main@f7aad27` 领取；确认 `Blocked by: none`，开始按 P1-02 范围实施。
+- 2026-07-29：Oxlint 1.76.0 等价首次扫描发现 18 处 Vitest mock 缺失函数签名、1 处 Promise 链末端未显式返回、1 处测试只依赖构造副作用，以及 2 个有意的副作用 import。前 20 项均以最小改动修复；CSS 与 `pixi.js/unsafe-eval` 仅通过 `import/no-unassigned-import` 的 `allow` 精确放行，没有关闭 correctness/suspicious 类别。
+- 2026-07-29：Standards 与 Spec 双轴 review 及 Windows CLI 可移植性调整后的增量复核均无阻塞或非阻塞发现。
+- 2026-07-29：人工桌面 QA 不适用；本票只改变工程 lint、测试类型标注、Node 工具链下限与文档，不改变 Tauri 窗口、菜单栏、渲染或用户交互。
+- 2026-07-29 12:16:59 +0800：实现已由中文提交 `c9db2eecec8a37733025da85fedf8e65a63ada02` 固化，随后回写关闭证据。
 
 ## Closeout Evidence
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: macOS / Node v22.14.0 环境通过范围检查、26 项 Rust 测试、73 项 Web/Vitest 测试、Rust fmt/Clippy、Oxlint、`vue-tsc`、Vite 构建、真实 Tauri release 构建与 closeout 扫描。
 
 ### Manual QA
 
-- Status: pending
-- Command: pending
-- Result: pending
-- Reason: pending
+- Status: not-applicable
+- Command: `not-applicable`
+- Result: 未运行桌面人工 QA；自动测试、lint 与真实 Tauri 构建覆盖了本票的工程反馈链路。
+- Reason: 本票没有用户可见或桌面交互行为变化，人工点击、视觉与窗口验收不能增加与 Oxlint 接入相关的证据。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: 两轴均无阻塞或非阻塞发现；Windows Oxlint CLI 可移植性调整后完成增量复核，结论不变。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: c9db2eecec8a37733025da85fedf8e65a63ada02
 
 ## Answer
 
-待实施。
+已接入固定版本 Oxlint 1.76.0，并通过稳定 `.oxlintrc.json` 启用 `eslint`、`typescript`、`vue`、`vitest`、`import`、`promise` 与 `oxc` 原生插件。`correctness` 和 `suspicious` 均作为 error，warning 也会阻断；`typeAware` 与 `typeCheck` 显式关闭，未安装 `oxlint-tsgolint`。
+
+`pnpm lint:web` 现在先检查 `src/ui`、`scripts` 和 `vite.config.ts`，再运行 `vue-tsc --noEmit`。配置显式排除 `reference`、`research`、prototype、`.codex`、`output`、coverage、`target`、`dist`、`src-tauri/gen` 与 `node_modules`。集成测试会在临时仓库真实执行 Oxlint，证明辅助/生成范围被忽略，并证明正式 Vitest 源码中的无类型 mock 返回非零状态。
+
+首次扫描的 20 个真实代码/测试问题已修复，两个有意副作用 import 使用规则自带 allow 精确放行；没有全局关闭 correctness/suspicious 规则。Oxlint 1.76.0 的运行时要求同时使根 Node 下限、只读 doctor 与恢复文档统一为 22.12+。
+
+已知限制是 Oxlint 当前只分析 Vue `<script>`，不覆盖 template 专用规则；普通模式也不执行 type-aware 规则，Vue/TypeScript 类型诊断继续由 `vue-tsc` 承担。未引入 ESLint、Oxfmt、覆盖率、视觉/E2E 或 TypeScript 升级。
