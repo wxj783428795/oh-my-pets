@@ -1,5 +1,6 @@
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
+import { configDefaults } from "vitest/config";
 
 import {
   WEB_COVERAGE_EXCLUDE,
@@ -19,6 +20,7 @@ export default defineConfig({
   },
   envPrefix: ["VITE_", "TAURI_"],
   test: {
+    exclude: [...configDefaults.exclude, "tests/e2e/**"],
     coverage: {
       provider: "v8",
       include: [...WEB_COVERAGE_INCLUDE],

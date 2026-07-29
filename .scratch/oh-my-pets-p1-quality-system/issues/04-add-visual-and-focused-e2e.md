@@ -1,7 +1,7 @@
 # 增加 PixiJS 视觉验证与有限核心 E2E
 
 Type: task
-Status: open
+Status: claimed
 Closeout-Contract: v1
 Blocked by: none
 
@@ -40,6 +40,7 @@ Blocked by: none
 ## Comments
 
 - 2026-07-29：用户确认增加确定性 Pixi 视觉验证和有限核心 E2E，并要求不重复 P0 desktop smoke；当前保持 `open`，等待独立实施上下文领取。
+- 2026-07-29 12:47:07 CST：已在分支 `codex/p1-04-visual-e2e` 领取；实施基线为 `9d0ae28328710303667024bc3b69b93af554b6a5`，依赖状态为 `none`。
 
 ## Closeout Evidence
 

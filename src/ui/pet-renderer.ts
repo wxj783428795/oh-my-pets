@@ -216,6 +216,7 @@ export class PetRenderer {
           backgroundAlpha: 0,
           antialias: true,
           autoDensity: true,
+          preference: "webgl",
           resolution: Math.min(window.devicePixelRatio, 2),
         })
         .then(() => {

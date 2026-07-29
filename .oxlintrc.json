@@ -51,7 +51,7 @@
       }
     },
     {
-      "files": ["scripts/**/*.mjs", "vite.config.ts"],
+      "files": ["scripts/**/*.mjs", "vite.config.ts", "playwright.config.ts"],
       "env": {
         "node": true
       }

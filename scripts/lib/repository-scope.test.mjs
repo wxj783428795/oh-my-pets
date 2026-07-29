@@ -9,6 +9,11 @@ import {
 describe("正式主线边界", () => {
   test.each([
     ["src/ui/App.vue", "mainline"],
+    [
+      "tests/e2e/pet-workbench.spec.ts-snapshots/juanjuan-canvas-chromium-darwin.png",
+      "mainline",
+    ],
+    ["docs/visual-testing.md", "mainline"],
     [".scratch/preview/spec.md", "process"],
     [".scratch/preview/issues/01-build.md", "process"],
     [".scratch/preview/prototypes/shell/package.json", "prototype"],
@@ -17,6 +22,7 @@ describe("正式主线边界", () => {
     [".codex/better-harness/report.html", "generated"],
     ["output/report.pdf", "generated"],
     ["target/release/oh-my-pets", "generated"],
+    ["target/playwright/results/diff.png", "generated"],
   ])("%s 分类为 %s", (path, category) => {
     expect(classifyRepositoryPath(path)).toBe(category);
   });

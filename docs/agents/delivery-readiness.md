@@ -7,16 +7,21 @@
 | 命令                   | 用途                                                            | 能否作为最终关闭证据 |
 | ---------------------- | --------------------------------------------------------------- | -------------------- |
 | `pnpm lint:web`        | 非 type-aware Oxlint 静态分析与 `vue-tsc` 类型检查              | 否                   |
+| `pnpm test:e2e`        | 真实 Chromium 中的 Canvas 视觉比较与有限 Web/UI E2E             | 否                   |
 | `pnpm coverage`        | 生成 Vitest 与 Rust 文本摘要、范围清单和本地 HTML，不设阈值     | 否                   |
-| `pnpm verify:core`     | 范围检查、测试、lint、WebView 构建                              | 否                   |
+| `pnpm verify:core`     | 范围检查、Rust/Vitest、视觉/E2E、lint、WebView 构建             | 否                   |
 | `pnpm verify`          | `verify:core`、真实 `tauri build`、resolved ticket 关闭证据扫描 | 是                   |
 | `pnpm qa:desktop:auto` | 构建真实 Tauri 应用并执行自动 smoke                             | 仅桌面自动化部分     |
 | `pnpm qa:desktop`      | 构建带图标的本地 `.app`，自动 smoke 后启动 macOS 人工清单       | 是，需验收人逐项确认 |
 | `pnpm closeout:check`  | 扫描所有 resolved ticket                                        | 是                   |
 
-`pnpm lint:web` 中 Oxlint 只检查 `src/ui`、`scripts` 和根 Vite 配置，并显式排除辅助资产与生成物；它能够分析 Vue `<script>`，但不补齐 template 专用规则。`vue-tsc --noEmit` 继续承担 Vue/TypeScript 类型检查，二者任一失败都会阻断该命令。
+`pnpm lint:web` 中 Oxlint 只检查 `src/ui`、`scripts`、`tests/e2e` 和根 Vite/Playwright 配置，并显式排除辅助资产与生成物；它能够分析 Vue `<script>`，但不补齐 template 专用规则。`vue-tsc --noEmit` 继续承担 Vue/TypeScript 类型检查，二者任一失败都会阻断该命令。
 
-`pnpm coverage:web` 使用 Vitest/V8 报告 `src/ui/` 与 `scripts/` 中的正式源码，`pnpm coverage:rust` 使用 `cargo-llvm-cov` 报告两个 workspace crate 的 `src/`。两条命令都会机械检查范围清单，拒绝测试、生成代码、prototype、research、reference 或构建产物混入。聚合入口 `pnpm coverage` 只生成可解释基线，不设置阈值，也不替代或进入 `pnpm verify`。文本摘要直接输出到终端；JSON 与 HTML 位于 `target/coverage/web/` 和 `target/coverage/rust/`，首次基线与盲区见 `docs/coverage-baseline.md`。
+`pnpm test:e2e` 使用固定 Playwright 与单一 Chromium，在 900×760 viewport、DPR 1、固定 locale/timezone/color scheme/reduced-motion 和固定时间下加载仓库内卷卷宠物包。它比较真实 PixiJS WebGL Canvas 的平台专属 expected 基线，并验证一次受控加载失败后的重新加载恢复。常规配置使用 `updateSnapshots: "none"`；只有 `pnpm test:e2e:update` 能显式更新变化的基线。expected 基线位于 `tests/e2e/**-snapshots/`，actual/diff、trace、HTML report 和浏览器缓存位于被忽略的 `target/playwright/`。详细边界见 `docs/visual-testing.md`。
+
+该套件是 Web/UI 与 renderer E2E：浏览器测试 seam 只提供固定 Tauri command 输入，不运行 Rust backend、WKWebView、菜单栏、透明窗口合成或操作系统交互。因此它不重复也不替代 `pnpm qa:desktop:auto` 和 `pnpm qa:desktop`。
+
+`pnpm coverage:web` 使用 Vitest/V8 报告 `src/ui/` 与 `scripts/` 中的正式源码，并显式排除只在浏览器测试模式加载的 `src/ui/browser-test-platform.ts`；`pnpm coverage:rust` 使用 `cargo-llvm-cov` 报告两个 workspace crate 的 `src/`。两条命令都会机械检查范围清单，拒绝测试、测试 seam、生成代码、prototype、research、reference 或构建产物混入。聚合入口 `pnpm coverage` 只生成可解释基线，不设置阈值，也不替代或进入 `pnpm verify`。文本摘要直接输出到终端；JSON 与 HTML 位于 `target/coverage/web/` 和 `target/coverage/rust/`，首次基线与盲区见 `docs/coverage-baseline.md`。
 
 `pnpm qa:desktop:auto` 的报告写入被 Git 忽略的 `target/desktop-smoke/report.json`，覆盖：
 

@@ -7,6 +7,7 @@ export const WEB_COVERAGE_INCLUDE = Object.freeze([
 export const WEB_COVERAGE_EXCLUDE = Object.freeze([
   "**/*.test.{ts,mjs}",
   "**/*.d.ts",
+  "src/ui/browser-test-platform.ts",
 ]);
 export const WEB_COVERAGE_REPORTERS = Object.freeze([
   "text",
@@ -27,7 +28,11 @@ function repositoryPath(filename, repositoryRoot) {
 }
 
 function isWebSource(path) {
-  if (path.endsWith(".d.ts") || /\.test\.(?:ts|mjs)$/.test(path)) {
+  if (
+    path.endsWith(".d.ts") ||
+    /\.test\.(?:ts|mjs)$/.test(path) ||
+    path === "src/ui/browser-test-platform.ts"
+  ) {
     return false;
   }
   return (

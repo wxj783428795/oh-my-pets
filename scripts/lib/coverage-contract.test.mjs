@@ -51,6 +51,7 @@ describe("覆盖率范围与报告契约", () => {
     ]);
     expect(WEB_COVERAGE_EXCLUDE).toContain("**/*.test.{ts,mjs}");
     expect(WEB_COVERAGE_EXCLUDE).toContain("**/*.d.ts");
+    expect(WEB_COVERAGE_EXCLUDE).toContain("src/ui/browser-test-platform.ts");
     expect(WEB_COVERAGE_REPORTERS).toEqual(["text", "json-summary", "html"]);
     expect(WEB_COVERAGE_REPORTS_DIRECTORY).toBe("target/coverage/web");
   });
@@ -72,12 +73,13 @@ describe("覆盖率范围与报告契约", () => {
         {
           total: {},
           "/repo/src/ui/App.test.ts": {},
+          "/repo/src/ui/browser-test-platform.ts": {},
           "/repo/research/notes.mjs": {},
         },
         "/repo",
       ),
     ).toThrow(
-      "Vitest 覆盖率包含非正式源码：src/ui/App.test.ts, research/notes.mjs",
+      "Vitest 覆盖率包含非正式源码：src/ui/App.test.ts, src/ui/browser-test-platform.ts, research/notes.mjs",
     );
   });
 

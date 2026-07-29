@@ -22,7 +22,7 @@ describe("Oxlint 前端静态分析契约", () => {
     const packageJson = JSON.parse(await readFile(packageUrl, "utf8"));
 
     expect(packageJson.scripts["lint:web"]).toBe(
-      "oxlint src/ui scripts vite.config.ts && vue-tsc --noEmit",
+      "oxlint src/ui scripts tests/e2e vite.config.ts playwright.config.ts && vue-tsc --noEmit",
     );
     expect(packageJson.devDependencies.oxlint).toBeDefined();
     expect(packageJson.devDependencies["oxlint-tsgolint"]).toBeUndefined();
@@ -111,7 +111,14 @@ describe("Oxlint 前端静态分析契约", () => {
       );
       const failureRun = spawnSync(
         process.execPath,
-        [oxlintCli, "src/ui", "scripts", "vite.config.ts"],
+        [
+          oxlintCli,
+          "src/ui",
+          "scripts",
+          "tests/e2e",
+          "vite.config.ts",
+          "playwright.config.ts",
+        ],
         {
           cwd: fixtureRoot,
           encoding: "utf8",

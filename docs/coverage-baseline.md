@@ -43,7 +43,7 @@ Rust 入口只运行一次 workspace/all-targets 测试，再复用同一份 pro
 - 详细报告：`target/coverage/rust/html/index.html`
 - 原始 profile 与 instrumented build：`target/llvm-cov-target/`
 
-范围检查确认 Web 报告只有 `src/ui/` 与 `scripts/` 的 17 个正式源码文件，Rust 报告只有 `src/pet-domain/src/` 与 `src-tauri/src/` 的 9 个正式源码文件。测试、声明文件、生成代码、prototype、research、reference 与构建产物不进入指标；范围为空或发现越界文件时命令会失败。
+首次范围检查确认 Web 报告只有当时 `src/ui/` 与 `scripts/` 的 17 个正式源码文件，Rust 报告只有 `src/pet-domain/src/` 与 `src-tauri/src/` 的 9 个正式源码文件。后续正式源码会改变当前报告文件数，但不会回写这组点位基线。测试、声明文件、只在浏览器测试模式加载的 `src/ui/browser-test-platform.ts`、生成代码、prototype、research、reference 与构建产物不进入指标；范围为空或发现越界文件时命令会失败。
 
 ## 首次指标
 

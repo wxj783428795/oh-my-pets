@@ -26,7 +26,13 @@ pnpm dev
 pnpm verify
 ```
 
-`pnpm verify` 会依次运行正式范围检查、完整测试、lint、WebView 构建、真实 Tauri 桌面构建和 resolved ticket 关闭证据扫描，用于关闭最终改动。日常快速反馈可运行 `pnpm verify:core`，但它不能替代最终关闭检查。
+`pnpm verify` 会依次运行正式范围检查、Rust/Vitest 测试、真实 Chromium 中的 Canvas 视觉与有限 Web E2E、lint、WebView 构建、真实 Tauri 桌面构建和 resolved ticket 关闭证据扫描，用于关闭最终改动。日常快速反馈可运行 `pnpm verify:core`，但它不能替代最终关闭检查。首次运行浏览器检查或升级 Playwright 后，先执行：
+
+```bash
+pnpm test:e2e:install
+```
+
+浏览器下载物进入被 Git 忽略的 `target/playwright-browsers/`。日常比较使用 `pnpm test:e2e`；只有确需更新且准备人工审阅基线时才运行 `pnpm test:e2e:update`。确定性输入、失败产物和原生桌面 QA 边界见 [PixiJS 视觉验证与有限 Web E2E](docs/visual-testing.md)。
 
 只检查前端静态分析与类型时运行：
 
@@ -34,7 +40,7 @@ pnpm verify
 pnpm lint:web
 ```
 
-该命令先用非 type-aware Oxlint 检查正式前端、工程脚本和根 Vite 配置，再运行 `vue-tsc --noEmit`。Oxlint 提供快速代码规则反馈，`vue-tsc` 保留 Vue/TypeScript 类型检查职责；Vue template 专用规则暂不在 Oxlint 覆盖范围内。
+该命令先用非 type-aware Oxlint 检查正式前端、工程脚本、Web E2E 和根 Vite/Playwright 配置，再运行 `vue-tsc --noEmit`。Oxlint 提供快速代码规则反馈，`vue-tsc` 保留 Vue/TypeScript 类型检查职责；Vue template 专用规则暂不在 Oxlint 覆盖范围内。
 
 桌面验收分层执行：
 

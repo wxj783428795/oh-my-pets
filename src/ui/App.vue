@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { invoke } from "@tauri-apps/api/core";
-import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { actionLabel } from "./action-labels";
 import { PetRenderer } from "./pet-renderer";
+import { usePlatform, type UnlistenFn } from "./platform";
 import type {
   BehaviorStep,
   CommandError,
@@ -36,6 +34,7 @@ let latestPackRevision = 0;
 let nextLoadingOperation = 0;
 const loadingOperations = new Set<number>();
 
+const { emit, getCurrentWindow, invoke, listen } = usePlatform();
 const appWindow = getCurrentWindow();
 const packHealth = computed(() => {
   if (!pack.value) {
