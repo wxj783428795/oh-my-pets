@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "architecture:check": "node scripts/check-architecture.mjs",
     "ci:bootstrap": "pnpm install --frozen-lockfile && pnpm test:e2e:install",
     "ci:verify": "pnpm ci:bootstrap && pnpm verify",
     "doctor:desktop": "node scripts/doctor.mjs",
@@ -27,7 +28,7 @@
     "lint": "pnpm lint:rust && pnpm lint:web",
     "lint:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
     "lint:web": "oxlint src/ui scripts tests/e2e vite.config.ts playwright.config.ts && vue-tsc --noEmit",
-    "verify:core": "pnpm scope:check && pnpm test && pnpm test:e2e && pnpm lint && pnpm build:web:assets",
+    "verify:core": "pnpm scope:check && pnpm architecture:check && pnpm test && pnpm test:e2e && pnpm lint && pnpm build:web:assets",
     "verify": "pnpm verify:core && pnpm build:desktop && pnpm closeout:check",
     "qa:desktop": "pnpm build:desktop:qa && node scripts/desktop-qa.mjs --manual",
     "qa:desktop:auto": "pnpm build:desktop && node scripts/desktop-qa.mjs --auto",
