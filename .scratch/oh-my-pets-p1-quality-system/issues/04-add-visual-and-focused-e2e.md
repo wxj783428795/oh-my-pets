@@ -1,7 +1,7 @@
 # 增加 PixiJS 视觉验证与有限核心 E2E
 
 Type: task
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: none
 
@@ -41,33 +41,40 @@ Blocked by: none
 
 - 2026-07-29：用户确认增加确定性 Pixi 视觉验证和有限核心 E2E，并要求不重复 P0 desktop smoke；当前保持 `open`，等待独立实施上下文领取。
 - 2026-07-29 12:47:07 CST：已在分支 `codex/p1-04-visual-e2e` 领取；实施基线为 `9d0ae28328710303667024bc3b69b93af554b6a5`，依赖状态为 `none`。
+- 2026-07-29 13:13:31 CST：实现提交为 `616a3295edbe5f52803d0bfed5e9f5f71363f911`；最终验证、视觉基线人工复核与双轴 review 均已完成，关闭 P1-04。
 
 ## Closeout Evidence
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: 最后测试改动后通过；Rust 26 个测试、Vitest 97 个测试、Chromium 2 个测试、Oxlint、vue-tsc、Clippy、Web 资产构建、真实 Tauri release build 与 closeout 扫描全部成功。
 
 ### Manual QA
 
-- Status: pending
-- Command: pending
-- Result: pending
-- Reason: pending
+- Status: not-applicable
+- Command: `pnpm qa:desktop`
+- Result: 未执行原生桌面 QA；已人工查看 `tests/e2e/pet-workbench.spec.ts-snapshots/juanjuan-canvas-chromium-darwin.png`，确认 expected 为仓库卷卷宠物包的完整可见 Canvas，且普通比较连续运行稳定。
+- Reason: 本票只增加 Web/UI renderer 验证、测试专用 Tauri 输入 seam 和工程门禁，不修改托盘、窗口、点击穿透、诊断或其他原生桌面行为；按非目标不重复 P0 desktop smoke。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: Standards 初审的测试命名约定、ticker/首帧文档归因、端口重复与精确 origin 守卫发现均已修复；修复后两轴复核均为 0 项剩余或新增发现。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: 616a3295edbe5f52803d0bfed5e9f5f71363f911
 
 ## Answer
 
-待实施。
+已固定 `@playwright/test` 1.62.0，并提供把匹配 Chromium 安装到 `target/playwright-browsers/` 的根命令。Playwright 以 900×760 viewport、DPR 1、固定 locale/timezone/color scheme/reduced-motion 和页面时间运行；Pixi renderer 固定 WebGL、停止 ticker、使用受控卷卷资源首帧并显式 render。当前 Canvas expected 只包含图像，不包含字体；页面文字不进入截图且不能改变固定 Canvas 尺寸。
+
+普通 `pnpm test:e2e` 使用 `updateSnapshots: "none"` 做零容差比较，只有 `pnpm test:e2e:update` 能显式更新变化的 expected。actual/diff、trace、HTML report 和浏览器缓存均进入被忽略的 `target/playwright/`，范围与配置测试会拒绝测试 seam、research/reference 或生成物污染覆盖率和关闭范围。
+
+两条有限旅程分别证明真实 Chromium 中首次加载后的 320×320 Pixi WebGL Canvas 可见，以及受控初始宠物包失败后能通过“重新加载示例宠物包”恢复。浏览器 seam 不进入正式 Web 构建，只提供固定 Tauri command 输入，不冒充 Rust backend、WKWebView 或原生 GUI；`pnpm test:e2e` 已接入 `verify:core`。
+
+已知盲区：expected 是 Playwright Chromium 的 macOS/Darwin 平台基线；本票不建立跨浏览器、Windows 图形会话或云视觉矩阵，也不覆盖任何 P0 原生桌面交互。Playwright 升级或更换受控渲染环境时需显式重装 Chromium 并人工审阅基线变化。
