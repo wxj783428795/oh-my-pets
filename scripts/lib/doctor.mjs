@@ -3,6 +3,7 @@ import { access } from "node:fs/promises";
 import net from "node:net";
 import { resolve } from "node:path";
 
+import { CARGO_LLVM_COV_VERSION, hasLlvmTools } from "./coverage-rust.mjs";
 import { desktopExecutablePath } from "./desktop-qa.mjs";
 
 export const DEVELOPMENT_PORT = 1420;
@@ -92,6 +93,41 @@ async function platformCheck(platform) {
     "warn",
     `${platform} 不在正式桌面目标平台内`,
     `${RECOVERY_GUIDE}#tauri-前置条件`,
+  );
+}
+
+async function rustCoverageCheck({ probes, repositoryRoot }) {
+  const result = await probes.run("cargo", ["llvm-cov", "--version"], {
+    cwd: repositoryRoot,
+  });
+  if (result.ok) {
+    const components = await probes.run(
+      "rustup",
+      ["component", "list", "--installed"],
+      { cwd: repositoryRoot },
+    );
+    if (components.ok && hasLlvmTools(components.stdout)) {
+      return check("rust-coverage", "pass", commandOutput(result));
+    }
+    return check(
+      "rust-coverage",
+      "warn",
+      `${commandOutput(result)} 可用，但缺少 llvm-tools-preview`,
+      [
+        "全局安装：rustup component add llvm-tools-preview",
+        '或本地安装：RUSTUP_HOME="$PWD/target/coverage-rustup" rustup toolchain install stable --profile minimal --component llvm-tools-preview',
+      ].join("；"),
+    );
+  }
+  return check(
+    "rust-coverage",
+    "warn",
+    `未检测到可选的 cargo-llvm-cov ${CARGO_LLVM_COV_VERSION}`,
+    [
+      `全局安装：cargo install cargo-llvm-cov --version ${CARGO_LLVM_COV_VERSION} --locked`,
+      `或本地安装：cargo install --root target/coverage-tools cargo-llvm-cov --version ${CARGO_LLVM_COV_VERSION} --locked`,
+      '再以 PATH="$PWD/target/coverage-tools/bin:$PATH" pnpm coverage:rust 运行',
+    ].join("；"),
   );
 }
 
@@ -270,6 +306,7 @@ export async function diagnoseRepository({ repositoryRoot, probes }) {
       label: "Cargo",
       next: `${RECOVERY_GUIDE}#tauri-前置条件`,
     }),
+    await rustCoverageCheck({ probes, repositoryRoot }),
     await versionCheck({
       probes,
       repositoryRoot,

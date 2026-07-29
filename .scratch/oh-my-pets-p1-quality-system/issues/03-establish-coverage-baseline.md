@@ -1,7 +1,7 @@
 # 建立 Vitest 与 Rust 覆盖率基线
 
 Type: task
-Status: open
+Status: claimed
 Closeout-Contract: v1
 Blocked by: none
 
@@ -39,6 +39,7 @@ Blocked by: none
 ## Comments
 
 - 2026-07-29：用户确认先建立报告基线、不设硬百分比；当前保持 `open`，等待独立实施上下文领取。
+- 2026-07-29 12:21:21 +0800：在独立 worktree 的 `codex/p1-03-coverage-baseline` 分支领取；基线为 `main` 的 `39b2daf000fb1630666dd852b2a695bb600452aa`。
 
 ## Closeout Evidence
 

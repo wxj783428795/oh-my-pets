@@ -43,6 +43,10 @@ function fixture({
       "pnpm --version": successful("10.27.0"),
       "rustc --version": successful("rustc 1.97.1 (fixture)"),
       "cargo --version": successful("cargo 1.97.1 (fixture)"),
+      "cargo llvm-cov --version": successful("cargo-llvm-cov 0.8.7"),
+      "rustup component list --installed": successful(
+        "llvm-tools-aarch64-apple-darwin",
+      ),
       "pnpm exec tauri --version": successful("tauri-cli 2.11.4"),
       "xcode-select -p": successful("/Applications/Xcode.app"),
       ...commands,
@@ -87,13 +91,14 @@ describe("只读 doctor", () => {
 
     expect(report.readOnly).toBe(true);
     expect(report.recoveryGuide).toBe("docs/desktop-recovery.md");
-    expect(report.summary).toEqual({ pass: 13, warn: 0, fail: 0 });
+    expect(report.summary).toEqual({ pass: 14, warn: 0, fail: 0 });
     expect(report.checks.map(({ id }) => id)).toEqual([
       "platform",
       "node",
       "pnpm",
       "rustc",
       "cargo",
+      "rust-coverage",
       "tauri-cli",
       "tauri-prerequisites",
       "development-port",
@@ -159,6 +164,54 @@ describe("只读 doctor", () => {
     expect(doctorExitCode(report)).toBe(1);
   });
 
+  test("可选 Rust coverage 工具缺失只警告并提供固定版本安装命令", async () => {
+    const report = await diagnoseRepository({
+      repositoryRoot,
+      probes: fixture({
+        commands: {
+          "cargo llvm-cov --version": {
+            ok: false,
+            stdout: "",
+            stderr: "no such command",
+          },
+        },
+      }),
+    });
+    const coverage = checksById(report)["rust-coverage"];
+
+    expect(coverage).toMatchObject({
+      status: "warn",
+      detail: "未检测到可选的 cargo-llvm-cov 0.8.7",
+    });
+    expect(coverage.next).toContain(
+      "cargo install cargo-llvm-cov --version 0.8.7 --locked",
+    );
+    expect(coverage.next).toContain("target/coverage-tools");
+    expect(report.summary).toEqual({ pass: 13, warn: 1, fail: 0 });
+    expect(doctorExitCode(report)).toBe(0);
+  });
+
+  test("cargo-llvm-cov 可用但缺少 llvm-tools-preview 时仍只警告", async () => {
+    const report = await diagnoseRepository({
+      repositoryRoot,
+      probes: fixture({
+        commands: {
+          "rustup component list --installed": successful("rustfmt"),
+        },
+      }),
+    });
+    const coverage = checksById(report)["rust-coverage"];
+
+    expect(coverage).toMatchObject({
+      status: "warn",
+      detail: "cargo-llvm-cov 0.8.7 可用，但缺少 llvm-tools-preview",
+    });
+    expect(coverage.next).toContain("rustup component add llvm-tools-preview");
+    expect(coverage.next).toContain("target/coverage-rustup");
+    expect(report.summary).toEqual({ pass: 13, warn: 1, fail: 0 });
+    expect(doctorExitCode(report)).toBe(0);
+  });
+
   test("非正式平台、端口占用和缺少本地产物只警告", async () => {
     const report = await diagnoseRepository({
       repositoryRoot,
@@ -184,7 +237,7 @@ describe("只读 doctor", () => {
     expect(checks["build-output"].next).toBe("pnpm build:desktop");
     expect(checks.diagnostics).toMatchObject({ status: "warn" });
     expect(checks.diagnostics.next).toContain("pnpm qa:desktop:auto");
-    expect(report.summary).toEqual({ pass: 8, warn: 5, fail: 0 });
+    expect(report.summary).toEqual({ pass: 9, warn: 5, fail: 0 });
     expect(doctorExitCode(report)).toBe(0);
   });
 

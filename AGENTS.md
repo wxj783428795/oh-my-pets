@@ -21,6 +21,9 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 - `pnpm dev`：启动 Vite 子进程并运行真正的 Tauri 主线。
 - `pnpm dev:web`：仅启动前端开发服务器，供 Tauri 调用，不等价于桌面应用。
 - `pnpm test`：运行 Rust workspace 和前端全部测试。
+- `pnpm coverage:web`：使用 Vitest 3.2.7 与固定版本的 V8 provider 运行前端/工程脚本测试，输出文本摘要，并把 JSON 范围清单与 HTML 写入 `target/coverage/web/`。
+- `pnpm coverage:rust`：使用 `cargo-llvm-cov` 运行 Rust workspace 全 targets 测试，输出文本摘要，并把 JSON 范围清单与 HTML 写入 `target/coverage/rust/`；缺少工具时会给出固定版本的全局或 worktree 本地安装选项。
+- `pnpm coverage`：依次运行 Web 与 Rust 覆盖率入口；当前只报告基线，不设置百分比门禁，也不属于 `pnpm verify`。
 - `pnpm lint`：运行 Rust 格式检查、Clippy，以及前端 Oxlint 静态分析和类型检查。
 - `pnpm lint:web`：先用普通、非 type-aware 的 Oxlint 检查 `src/ui`、`scripts` 和根 Vite 配置，再运行 `vue-tsc --noEmit`；Oxlint 负责快速代码规则反馈，`vue-tsc` 继续负责 Vue/TypeScript 类型检查。Oxlint 当前只检查 Vue `<script>`，不覆盖 template 专用规则。
 - `pnpm build:web`：执行前端类型检查并构建 WebView 资源。

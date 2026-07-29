@@ -6,7 +6,7 @@
 pnpm doctor:desktop
 ```
 
-doctor 默认只读，只检查平台、工具版本、Tauri 前置条件、`127.0.0.1:1420`、正式依赖和仓库内诊断/构建路径。它不会安装依赖、结束进程、清理缓存或修改用户文件。`fail` 表示继续构建前必须处理，`warn` 表示当前状态可能合理，但应按对应章节确认。
+doctor 默认只读，只检查平台、工具版本、可选 Rust coverage 工具、Tauri 前置条件、`127.0.0.1:1420`、正式依赖和仓库内诊断/构建路径。它不会安装依赖、结束进程、清理缓存或修改用户文件。`fail` 表示继续构建前必须处理，`warn` 表示当前状态可能合理，但应按对应章节确认。缺少可选 coverage 工具只会警告，不影响普通桌面开发检查。
 
 仓库使用 `doctor:desktop` 是因为 pnpm 10 自带同名 `pnpm doctor` 命令，package script 会被内置命令遮蔽；带命名空间的根命令确保实际运行本仓库检查。
 
@@ -51,6 +51,25 @@ pnpm install --frozen-lockfile
 ```
 
 该命令只恢复锁文件声明的仓库依赖。Tauri CLI 应通过 `pnpm exec tauri --version` 从仓库依赖解析，不使用来源不明的全局 CLI。Rust 依赖由后续 Cargo 构建按 `Cargo.lock` 解析；不要删除或重写锁文件来绕过失败。
+
+## Rust coverage 工具
+
+`pnpm coverage:rust` 需要 `cargo-llvm-cov 0.8.7` 与当前 Rust toolchain 的 `llvm-tools-preview`。doctor 只读提示 `cargo-llvm-cov` 是否可用，不会安装它，也不会因为这个可选工具缺失而失败。开发者可以明确选择常规安装：
+
+```bash
+cargo install cargo-llvm-cov --version 0.8.7 --locked
+rustup component add llvm-tools-preview
+```
+
+若只想为当前 worktree 生成一次本地报告，可把两项都隔离在已忽略的 `target/`：
+
+```bash
+cargo install --root target/coverage-tools cargo-llvm-cov --version 0.8.7 --locked
+RUSTUP_HOME="$PWD/target/coverage-rustup" rustup toolchain install stable --profile minimal --component llvm-tools-preview
+RUSTUP_HOME="$PWD/target/coverage-rustup" RUSTUP_TOOLCHAIN=stable PATH="$PWD/target/coverage-tools/bin:$PATH" pnpm coverage:rust
+```
+
+缺少任一项时，正式根命令会在运行测试前清晰失败，不会代为修改全局 toolchain。生成报告位于 `target/coverage/rust/`，原始 profile 与隔离工具同样留在 `target/`；这些都是可再生本地输出，不提交。覆盖率不是 `pnpm verify` 的组成部分，首次基线和盲区见 `docs/coverage-baseline.md`。
 
 ## 构建失败
 

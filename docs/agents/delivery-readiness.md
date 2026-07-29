@@ -7,6 +7,7 @@
 | 命令                   | 用途                                                            | 能否作为最终关闭证据 |
 | ---------------------- | --------------------------------------------------------------- | -------------------- |
 | `pnpm lint:web`        | 非 type-aware Oxlint 静态分析与 `vue-tsc` 类型检查              | 否                   |
+| `pnpm coverage`        | 生成 Vitest 与 Rust 文本摘要、范围清单和本地 HTML，不设阈值     | 否                   |
 | `pnpm verify:core`     | 范围检查、测试、lint、WebView 构建                              | 否                   |
 | `pnpm verify`          | `verify:core`、真实 `tauri build`、resolved ticket 关闭证据扫描 | 是                   |
 | `pnpm qa:desktop:auto` | 构建真实 Tauri 应用并执行自动 smoke                             | 仅桌面自动化部分     |
@@ -14,6 +15,8 @@
 | `pnpm closeout:check`  | 扫描所有 resolved ticket                                        | 是                   |
 
 `pnpm lint:web` 中 Oxlint 只检查 `src/ui`、`scripts` 和根 Vite 配置，并显式排除辅助资产与生成物；它能够分析 Vue `<script>`，但不补齐 template 专用规则。`vue-tsc --noEmit` 继续承担 Vue/TypeScript 类型检查，二者任一失败都会阻断该命令。
+
+`pnpm coverage:web` 使用 Vitest/V8 报告 `src/ui/` 与 `scripts/` 中的正式源码，`pnpm coverage:rust` 使用 `cargo-llvm-cov` 报告两个 workspace crate 的 `src/`。两条命令都会机械检查范围清单，拒绝测试、生成代码、prototype、research、reference 或构建产物混入。聚合入口 `pnpm coverage` 只生成可解释基线，不设置阈值，也不替代或进入 `pnpm verify`。文本摘要直接输出到终端；JSON 与 HTML 位于 `target/coverage/web/` 和 `target/coverage/rust/`，首次基线与盲区见 `docs/coverage-baseline.md`。
 
 `pnpm qa:desktop:auto` 的报告写入被 Git 忽略的 `target/desktop-smoke/report.json`，覆盖：
 
@@ -35,7 +38,7 @@
 | prototype | `.scratch/**/prototypes/`                                              | 排除                      |
 | research  | `research/`                                                            | 排除，但保持 Git 可见     |
 | reference | `reference/`                                                           | 排除，只读且保持 Git 可见 |
-| generated | `.codex/`、`output/`、`target/`                                        | 排除                      |
+| generated | `.codex/`、`output/`、`target/`（含 `target/coverage/`）               | 排除                      |
 
 `.gitignore` 只直接隔离本地报告、输出和 prototype 子树，不整体忽略 `.scratch/`，也不隐藏 `research/` 或 `reference/`。`pnpm scope:check` 优先对当前 staged、unstaged 和未跟踪路径分类；工作树干净时改为检查 HEAD 提交，避免空门禁。发现辅助范围就失败，但不会删除、移动或覆盖任何文件。审查某个 Git 基线后的正式变更时可运行：
 
