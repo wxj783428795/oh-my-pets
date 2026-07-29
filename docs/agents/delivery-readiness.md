@@ -30,7 +30,7 @@
 
 `pnpm architecture:check` 只分析正式 Rust、Vue/TypeScript 和非测试工程脚本，生成 `target/quality/architecture/report.json`。前端内部 import 循环、Rust workspace 循环、`oh-my-pets-domain -> oh-my-pets` 反向依赖、范围污染和 Oxlint/Clippy/Cargo metadata 失败属于硬门禁；物理 LOC 与 large/medium/small 热点分组只提供 review 信号，不因跨过任意行数直接失败。Oxlint 同时执行单函数 `complexity` 与 `import/no-cycle`，Clippy 执行 `cognitive_complexity`；首次结果、范围和盲区见 `docs/architecture-baseline.md`。
 
-`.github/workflows/verify.yml` 只响应 pull request、`main` push 和手动触发，运行于标准 GitHub-hosted `macos-latest` ARM64 runner。workflow 使用只读仓库权限、30 分钟 timeout 和按 PR/分支取消旧运行的 concurrency；不包含矩阵、coverage、发布、签名或部署，只在失败时上传 `target/playwright/` 与桌面 smoke 诊断并保留 3 天。Actions 均固定到已审阅提交 SHA。GitHub 首次真实运行通过前，本机 `pnpm ci:verify` 只能证明 clean bootstrap 契约，不能冒充远端通过；`main` required check 也只能在真实 job 名稳定后配置，并应要求分支为最新提交。
+`.github/workflows/verify.yml` 只响应 pull request、`main` push 和手动触发，运行于标准 GitHub-hosted `macos-latest` ARM64 runner。workflow 使用只读仓库权限、30 分钟 timeout 和按 PR/分支取消旧运行的 concurrency；checkout 获取完整 Git 历史，供 closeout 验证已记录的实现提交；不包含矩阵、coverage、发布、签名或部署，只在失败时上传 `target/playwright/` 与桌面 smoke 诊断并保留 3 天。Actions 均固定到已审阅提交 SHA。GitHub 首次真实运行通过前，本机 `pnpm ci:verify` 只能证明 clean bootstrap 契约，不能冒充远端通过；`main` required check 也只能在真实 job 名稳定后配置，并应要求分支为最新提交。
 
 `pnpm qa:desktop:auto` 的报告写入被 Git 忽略的 `target/desktop-smoke/report.json`，覆盖：
 
