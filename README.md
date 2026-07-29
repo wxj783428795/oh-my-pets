@@ -7,7 +7,7 @@ Oh My Pets 是一个使用 Tauri 2、Rust、Vue 3 与 PixiJS 构建的桌面宠�
 环境要求：
 
 - Rust stable
-- Node.js 22+
+- Node.js 22.12+
 - pnpm 10+
 - macOS 14+ Apple Silicon
 
@@ -27,6 +27,14 @@ pnpm verify
 ```
 
 `pnpm verify` 会依次运行正式范围检查、完整测试、lint、WebView 构建、真实 Tauri 桌面构建和 resolved ticket 关闭证据扫描，用于关闭最终改动。日常快速反馈可运行 `pnpm verify:core`，但它不能替代最终关闭检查。
+
+只检查前端静态分析与类型时运行：
+
+```bash
+pnpm lint:web
+```
+
+该命令先用非 type-aware Oxlint 检查正式前端、工程脚本和根 Vite 配置，再运行 `vue-tsc --noEmit`。Oxlint 提供快速代码规则反馈，`vue-tsc` 保留 Vue/TypeScript 类型检查职责；Vue template 专用规则暂不在 Oxlint 覆盖范围内。
 
 桌面验收分层执行：
 

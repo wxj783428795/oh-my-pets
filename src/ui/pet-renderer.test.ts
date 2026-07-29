@@ -15,11 +15,15 @@ const {
   destroyedTextures,
   renderedFrames,
 } = vi.hoisted(() => ({
-  appDestroy: vi.fn(),
-  appInit: vi.fn(() => Promise.resolve()),
-  assetLoad: vi.fn(() => Promise.resolve({ source: {} })),
-  assetSetPreferences: vi.fn(),
-  assetUnload: vi.fn(() => Promise.resolve()),
+  appDestroy: vi.fn<() => void>(),
+  appInit: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  assetLoad: vi.fn<() => Promise<{ source: object }>>(() =>
+    Promise.resolve({ source: {} }),
+  ),
+  assetSetPreferences: vi.fn<(options: unknown) => void>(),
+  assetUnload: vi.fn<(assetUrl: string) => Promise<void>>(() =>
+    Promise.resolve(),
+  ),
   destroyedSprites: [] as boolean[],
   destroyedTextures: [] as boolean[],
   renderedFrames: [] as Array<number | null>,
@@ -51,7 +55,7 @@ vi.mock("pixi.js", () => {
 
   class MockSprite {
     texture: MockTexture;
-    readonly position = { set: vi.fn() };
+    readonly position = { set: vi.fn<(x: number, y: number) => void>() };
 
     constructor(texture: MockTexture) {
       this.texture = texture;
@@ -64,7 +68,7 @@ vi.mock("pixi.js", () => {
 
   class MockApplication {
     readonly canvas = document.createElement("canvas");
-    readonly ticker = { stop: vi.fn() };
+    readonly ticker = { stop: vi.fn<() => void>() };
     readonly stage = {
       children: [] as MockSprite[],
       removeChildren: () => {
@@ -75,7 +79,7 @@ vi.mock("pixi.js", () => {
       },
     };
     readonly renderer = {
-      resize: vi.fn(),
+      resize: vi.fn<(width: number, height: number) => void>(),
       render: () => {
         const sprite = this.stage.children.at(-1);
         const x = sprite?.texture.frame?.x;
@@ -166,12 +170,13 @@ describe("宠物动作播放", () => {
   });
 
   it("使用 WebKit 可用的图片元素路径加载内联图集", () => {
-    new PetRenderer();
+    const renderer = new PetRenderer();
 
     expect(assetSetPreferences).toHaveBeenCalledWith({
       preferCreateImageBitmap: false,
       preferWorkers: false,
     });
+    renderer.destroy();
   });
 
   it("按动作声明决定停在末帧或循环播放", async () => {

@@ -17,7 +17,7 @@
     "test:web": "vitest run",
     "lint": "pnpm lint:rust && pnpm lint:web",
     "lint:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
-    "lint:web": "vue-tsc --noEmit",
+    "lint:web": "oxlint src/ui scripts vite.config.ts && vue-tsc --noEmit",
     "verify:core": "pnpm scope:check && pnpm test && pnpm lint && pnpm build:web:assets",
     "verify": "pnpm verify:core && pnpm build:desktop && pnpm closeout:check",
     "qa:desktop": "pnpm build:desktop:qa && node scripts/desktop-qa.mjs --manual",
@@ -38,6 +38,7 @@
     "@vitejs/plugin-vue": "^6.0.0",
     "@vue/test-utils": "^2.4.11",
     "jsdom": "^30.0.0",
+    "oxlint": "1.76.0",
     "prettier": "^3.0.0",
     "typescript": "^5.6.3",
     "vite": "^7.0.0",
@@ -46,7 +47,7 @@
   },
   "packageManager": "pnpm@10.27.0",
   "engines": {
-    "node": ">=22",
+    "node": ">=22.12.0",
     "pnpm": ">=10"
   }
 }

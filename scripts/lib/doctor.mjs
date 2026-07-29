@@ -8,7 +8,7 @@ import { desktopExecutablePath } from "./desktop-qa.mjs";
 export const DEVELOPMENT_PORT = 1420;
 export const RECOVERY_GUIDE = "docs/desktop-recovery.md";
 
-const MINIMUM_NODE_MAJOR = 22;
+const MINIMUM_NODE_VERSION = Object.freeze([22, 12, 0]);
 const MINIMUM_PNPM_MAJOR = 10;
 const DEPENDENCY_MANIFEST_PATHS = Object.freeze([
   "package.json",
@@ -29,6 +29,26 @@ function majorVersion(output) {
   return match ? Number(match[1]) : null;
 }
 
+function semanticVersion(output) {
+  const match = output.match(/\bv?(\d+)\.(\d+)(?:\.(\d+))?\b/);
+  return match
+    ? [Number(match[1]), Number(match[2]), Number(match[3] ?? 0)]
+    : null;
+}
+
+function isVersionBefore(output, minimumVersion) {
+  const currentVersion = semanticVersion(output);
+  if (!currentVersion) {
+    return true;
+  }
+  for (let index = 0; index < minimumVersion.length; index += 1) {
+    if (currentVersion[index] !== minimumVersion[index]) {
+      return currentVersion[index] < minimumVersion[index];
+    }
+  }
+  return false;
+}
+
 function check(id, status, detail, next) {
   return next ? { id, status, detail, next } : { id, status, detail };
 }
@@ -41,6 +61,7 @@ async function versionCheck({
   args,
   label,
   minimumMajor,
+  minimumVersion,
   next,
 }) {
   const result = await probes.run(command, args, { cwd: repositoryRoot });
@@ -48,7 +69,10 @@ async function versionCheck({
   if (!result.ok) {
     return check(id, "fail", `${label} 不可用`, next);
   }
-  if (minimumMajor && majorVersion(output) < minimumMajor) {
+  if (
+    (minimumMajor && majorVersion(output) < minimumMajor) ||
+    (minimumVersion && isVersionBefore(output, minimumVersion))
+  ) {
     return check(
       id,
       "fail",
@@ -215,8 +239,8 @@ export async function diagnoseRepository({ repositoryRoot, probes }) {
       command: "node",
       args: ["--version"],
       label: "Node",
-      minimumMajor: MINIMUM_NODE_MAJOR,
-      next: `安装 Node 22 或更高版本；详见 ${RECOVERY_GUIDE}#依赖缺失`,
+      minimumVersion: MINIMUM_NODE_VERSION,
+      next: `安装 Node 22.12 或更高版本；详见 ${RECOVERY_GUIDE}#依赖缺失`,
     }),
     await versionCheck({
       probes,

@@ -6,11 +6,14 @@
 
 | 命令                   | 用途                                                            | 能否作为最终关闭证据 |
 | ---------------------- | --------------------------------------------------------------- | -------------------- |
+| `pnpm lint:web`        | 非 type-aware Oxlint 静态分析与 `vue-tsc` 类型检查              | 否                   |
 | `pnpm verify:core`     | 范围检查、测试、lint、WebView 构建                              | 否                   |
 | `pnpm verify`          | `verify:core`、真实 `tauri build`、resolved ticket 关闭证据扫描 | 是                   |
 | `pnpm qa:desktop:auto` | 构建真实 Tauri 应用并执行自动 smoke                             | 仅桌面自动化部分     |
 | `pnpm qa:desktop`      | 构建带图标的本地 `.app`，自动 smoke 后启动 macOS 人工清单       | 是，需验收人逐项确认 |
 | `pnpm closeout:check`  | 扫描所有 resolved ticket                                        | 是                   |
+
+`pnpm lint:web` 中 Oxlint 只检查 `src/ui`、`scripts` 和根 Vite 配置，并显式排除辅助资产与生成物；它能够分析 Vue `<script>`，但不补齐 template 专用规则。`vue-tsc --noEmit` 继续承担 Vue/TypeScript 类型检查，二者任一失败都会阻断该命令。
 
 `pnpm qa:desktop:auto` 的报告写入被 Git 忽略的 `target/desktop-smoke/report.json`，覆盖：
 

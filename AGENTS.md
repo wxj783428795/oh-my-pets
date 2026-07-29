@@ -21,7 +21,8 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 - `pnpm dev`：启动 Vite 子进程并运行真正的 Tauri 主线。
 - `pnpm dev:web`：仅启动前端开发服务器，供 Tauri 调用，不等价于桌面应用。
 - `pnpm test`：运行 Rust workspace 和前端全部测试。
-- `pnpm lint`：运行 Rust 格式检查、Clippy 和前端类型检查。
+- `pnpm lint`：运行 Rust 格式检查、Clippy，以及前端 Oxlint 静态分析和类型检查。
+- `pnpm lint:web`：先用普通、非 type-aware 的 Oxlint 检查 `src/ui`、`scripts` 和根 Vite 配置，再运行 `vue-tsc --noEmit`；Oxlint 负责快速代码规则反馈，`vue-tsc` 继续负责 Vue/TypeScript 类型检查。Oxlint 当前只检查 Vue `<script>`，不覆盖 template 专用规则。
 - `pnpm build:web`：执行前端类型检查并构建 WebView 资源。
 - `pnpm verify:core`：运行正式范围检查、测试、lint 和 WebView 构建，供快速开发反馈使用，不等价于关闭检查。
 - `pnpm verify`：在 `verify:core` 后执行真实 Tauri 桌面构建与 resolved ticket 关闭证据扫描，是最终改动后的统一关闭检查。

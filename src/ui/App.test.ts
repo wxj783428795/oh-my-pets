@@ -21,9 +21,18 @@ const {
     (event: { payload: { type: string; paths?: string[] } }) => void
   >,
   eventListeners: new Map<string, (event: { payload: unknown }) => void>(),
-  invoke: vi.fn(() => new Promise(() => undefined)),
-  nativeEmit: vi.fn(() => Promise.resolve()),
-  nativeListen: vi.fn(
+  invoke: vi.fn<(...args: unknown[]) => Promise<unknown>>(
+    () => new Promise(() => undefined),
+  ),
+  nativeEmit: vi.fn<(...args: unknown[]) => Promise<void>>(() =>
+    Promise.resolve(),
+  ),
+  nativeListen: vi.fn<
+    (
+      event: string,
+      listener: (event: { payload: unknown }) => void,
+    ) => Promise<() => void>
+  >(
     (
       event: string,
       listener: (event: { payload: unknown }) => void,
@@ -32,10 +41,12 @@ const {
       return Promise.resolve(() => eventListeners.delete(event));
     },
   ),
-  rendererClear: vi.fn(),
-  rendererMount: vi.fn(() => Promise.resolve()),
-  rendererPlay: vi.fn((_action: string, _holdMs: number) => Promise.resolve()),
-  startDragging: vi.fn(() => Promise.resolve()),
+  rendererClear: vi.fn<() => void>(),
+  rendererMount: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  rendererPlay: vi.fn<(_action: string, _holdMs: number) => Promise<void>>(
+    (_action: string, _holdMs: number) => Promise.resolve(),
+  ),
+  startDragging: vi.fn<() => Promise<void>>(() => Promise.resolve()),
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -49,8 +60,14 @@ vi.mock("@tauri-apps/api/event", () => ({
 
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({
-    hide: vi.fn(() => Promise.resolve()),
-    onDragDropEvent: vi.fn(
+    hide: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    onDragDropEvent: vi.fn<
+      (
+        listener: (event: {
+          payload: { type: string; paths?: string[] };
+        }) => void,
+      ) => Promise<() => void>
+    >(
       (
         listener: (event: {
           payload: { type: string; paths?: string[] };
@@ -864,7 +881,7 @@ describe("启动错误恢复", () => {
   });
 
   it("原生监听注册中途失败时清理已注册监听并显示错误", async () => {
-    const firstUnlisten = vi.fn();
+    const firstUnlisten = vi.fn<() => void>();
     invoke.mockResolvedValueOnce({
       clickThrough: false,
       alwaysOnTop: true,

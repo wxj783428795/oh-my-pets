@@ -142,6 +142,23 @@ describe("只读 doctor", () => {
     expect(doctorExitCode(report)).toBe(1);
   });
 
+  test("Node 22.12 以下版本会因 Oxlint 引擎约束失败", async () => {
+    const report = await diagnoseRepository({
+      repositoryRoot,
+      probes: fixture({
+        commands: {
+          "node --version": successful("v22.11.0"),
+        },
+      }),
+    });
+    const checks = checksById(report);
+
+    expect(checks.node).toMatchObject({ status: "fail" });
+    expect(checks.node.detail).toContain("v22.11.0");
+    expect(checks.node.next).toContain("Node 22.12");
+    expect(doctorExitCode(report)).toBe(1);
+  });
+
   test("非正式平台、端口占用和缺少本地产物只警告", async () => {
     const report = await diagnoseRepository({
       repositoryRoot,

@@ -225,6 +225,7 @@ export class PetRenderer {
           } else {
             this.initialized = true;
           }
+          return undefined;
         });
     }
     const promise = this.initializePromise;

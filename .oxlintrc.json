@@ -1,0 +1,66 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "plugins": [
+    "eslint",
+    "typescript",
+    "vue",
+    "vitest",
+    "import",
+    "promise",
+    "oxc"
+  ],
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "reference/**",
+    "research/**",
+    ".scratch/**/prototypes/**",
+    ".codex/**",
+    "output/**",
+    "coverage/**",
+    "target/**",
+    "dist/**",
+    "src-tauri/gen/**",
+    "node_modules/**"
+  ],
+  "rules": {
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": ["**/*.css", "pixi.js/unsafe-eval"]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/ui/**/*.ts", "src/ui/**/*.vue"],
+      "env": {
+        "browser": true,
+        "vue": true
+      }
+    },
+    {
+      "files": ["src/ui/**/*.test.ts", "scripts/**/*.test.mjs"],
+      "env": {
+        "vitest": true
+      }
+    },
+    {
+      "files": ["scripts/**/*.mjs", "vite.config.ts"],
+      "env": {
+        "node": true
+      }
+    }
+  ],
+  "options": {
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error",
+    "typeAware": false,
+    "typeCheck": false
+  }
+}

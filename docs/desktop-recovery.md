@@ -14,7 +14,7 @@ doctor 默认只读，只检查平台、工具版本、Tauri 前置条件、`127
 
 ## Tauri 前置条件
 
-macOS 正式开发环境需要 Node 22+、pnpm 10+、Rust/Cargo、仓库内 Tauri CLI，以及可由 `xcode-select -p` 定位的 Xcode Command Line Tools。缺少 Rust 时按 Rust 官方方式安装稳定工具链，再重新运行 `pnpm doctor:desktop`；缺少 Xcode 工具时由开发者主动运行系统安装流程，doctor 不代为安装。
+macOS 正式开发环境需要 Node 22.12+、pnpm 10+、Rust/Cargo、仓库内 Tauri CLI，以及可由 `xcode-select -p` 定位的 Xcode Command Line Tools。Node 下限同时满足 Oxlint 的运行时约束。缺少 Rust 时按 Rust 官方方式安装稳定工具链，再重新运行 `pnpm doctor:desktop`；缺少 Xcode 工具时由开发者主动运行系统安装流程，doctor 不代为安装。
 
 Windows 仍是产品目标平台，但当前票不扩张 Windows 实机验收。Windows 开发者需人工确认 Rust 使用 MSVC target，并已安装 Microsoft C++ Build Tools 与 WebView2 Runtime；确认后先运行 `pnpm doctor:desktop`，再用 `pnpm build:desktop` 验证真实链路。非 macOS/Windows 平台只能用于部分工程检查，不能作为桌面验收环境。
 
@@ -62,7 +62,7 @@ cargo check --workspace
 pnpm build:desktop
 ```
 
-保留首个失败命令的完整输出。前端失败优先处理 `vue-tsc` 或 Vite 报出的文件；Rust 失败优先处理 Cargo 的第一条 error；Tauri 打包失败再核对本页的原生前置条件。正式桌面产物位于 `target/release/oh-my-pets`，Windows 为 `target/release/oh-my-pets.exe`。只有最后一次相关改动后的 `pnpm verify` 可作为关闭证据。
+保留首个失败命令的完整输出。前端失败优先处理 Oxlint、`vue-tsc` 或 Vite 报出的第一个文件；Oxlint 负责快速代码规则反馈，`vue-tsc` 继续负责 Vue/TypeScript 类型检查。Rust 失败优先处理 Cargo 的第一条 error；Tauri 打包失败再核对本页的原生前置条件。正式桌面产物位于 `target/release/oh-my-pets`，Windows 为 `target/release/oh-my-pets.exe`。只有最后一次相关改动后的 `pnpm verify` 可作为关闭证据。
 
 ## 窗口不可见
 

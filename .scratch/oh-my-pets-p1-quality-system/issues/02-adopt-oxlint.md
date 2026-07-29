@@ -1,7 +1,7 @@
 # 接入 Oxlint 前端静态分析
 
 Type: task
-Status: open
+Status: claimed
 Closeout-Contract: v1
 Blocked by: none
 
@@ -39,6 +39,7 @@ Blocked by: none
 
 - 2026-07-29：用户确认采用“普通 Oxlint + 保留 vue-tsc”的路线；TypeScript 编译器升级另行决策，本票不得夹带。
 - 2026-07-29：当前保持 `open`，等待独立实施上下文领取。
+- 2026-07-29 11:59:59 +0800：已在独立 worktree 从 `main@f7aad27` 领取；确认 `Blocked by: none`，开始按 P1-02 范围实施。
 
 ## Closeout Evidence
 
