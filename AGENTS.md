@@ -46,7 +46,7 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 
 根目录 `pnpm` scripts 是正式主线的唯一统一入口。
 
-`.github/workflows/verify.yml` 在 pull request、`main` push 和手动触发时使用标准 GitHub-hosted macOS ARM64 runner 执行 `pnpm ci:verify`。workflow 只授予仓库内容读取权限、取消同一 PR 的旧运行，不运行 coverage、发布或多平台矩阵，仅在失败时保留 3 天诊断产物。真实远端运行和 `main` required check 的边界见 `docs/agents/delivery-readiness.md`。
+`.github/workflows/verify.yml` 在指向 `main`、`integration/**` 或 `release/**` 的 pull request 以及手动触发时，使用标准 GitHub-hosted macOS ARM64 runner 执行 `pnpm ci:verify`；受保护分支合并后的 push 不重复运行相同验证。workflow 只授予仓库内容读取权限、取消同一 PR 的旧运行，不运行 coverage、发布或多平台矩阵，仅在失败时保留 3 天诊断产物。真实远端运行和 required check 的边界见 `docs/agents/delivery-readiness.md`。
 
 `.codex/`、`output/` 和 `.scratch/**/prototypes/` 是本地生成或辅助范围，通过 `.gitignore` 隔离；`.scratch/**/spec.md`、`.scratch/**/map.md` 和 `.scratch/**/issues/*.md` 仍是正式流程资产。`research/` 与 `reference/` 保持可见但由 `pnpm scope:check` 从正式关闭范围中拒绝，不得为了清洁状态删除、移动或覆盖用户资产。完整边界见 `docs/agents/delivery-readiness.md`。
 
