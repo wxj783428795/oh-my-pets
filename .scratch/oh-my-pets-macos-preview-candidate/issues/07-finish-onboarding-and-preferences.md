@@ -58,8 +58,9 @@ Blocked by: 02, 04, 05, 06
 - `pnpm qa:desktop` 人工验证首次启动、第二次启动、重放、全部设置、菜单同步和
   关闭恢复。
 - 最后相关改动后 `pnpm verify` 通过，Standards + Spec 双轴 review 无阻塞项。
-- 创建主要实施分支对应、指向 `main` 的 Ready Pull Request，并在最新
-  `main` 上通过 `macOS ARM64 最终验证`；只允许 merge commit。
+- 创建主要实施分支对应、指向 `integration/macos-preview-candidate` 的 Ready
+  Pull Request，并在最新 integration 上通过 `macOS ARM64 最终验证`；只允许
+  merge commit。
 
 ## Implementation Notes
 
@@ -73,6 +74,14 @@ Blocked by: 02, 04, 05, 06
 
 - 2026-07-30：用户确认一次性非阻塞引导、最多两条提示和可重放规则，并确认
   菜单栏／偏好设置最终最小集合。
+- 2026-07-30：按用户批准的新策略迁移到
+  `integration/macos-preview-candidate`；本票等待 `Issue 02`、`04`、`05`、
+  `06` 的 Pull Request 全部合入 integration 并完成 closeout 后再领取。
+- 2026-07-30：历史迁移例外：planning 资产已在新生命周期规则生效前通过 Pull
+  Request #4 进入 `main`，因此不伪造 planning bootstrap。例外仅校正本专题
+  交付路由，不改写 `main`；风险是流程资产曾表达错误 target。补救为从
+  `main@6f06cc7` 建立受保护 integration、治理 PR 完整门禁、逐票 closeout 和
+  最终全规格 review。
 
 ## Closeout Evidence
 
