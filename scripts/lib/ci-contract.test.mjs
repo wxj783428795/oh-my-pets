@@ -29,6 +29,9 @@ describe("干净环境与 GitHub CI 契约", () => {
   test("根命令从 frozen install 和固定 Chromium 进入最终 verify", async () => {
     const packageJson = JSON.parse(await readRepositoryFile("package.json"));
 
+    expect(packageJson.scripts["ci:verify:lightweight"]).toBe(
+      "pnpm scope:check && pnpm closeout:check",
+    );
     expect(packageJson.scripts["ci:bootstrap"]).toBe(
       "pnpm install --frozen-lockfile && pnpm test:e2e:install",
     );
@@ -84,5 +87,27 @@ describe("干净环境与 GitHub CI 契约", () => {
     expect(workflow).toContain("if-no-files-found: ignore");
     expect(workflow).toContain("retention-days: 3");
     expect(workflow).not.toContain("target/playwright-browsers");
+  });
+
+  test("GitHub workflow 按路径选择轻量或完整验证且保持同一 required job", async () => {
+    const workflow = await readRepositoryFile(".github/workflows/verify.yml");
+
+    expect(workflow).toContain("id: change_tier");
+    expect(workflow).toContain(
+      'run: node scripts/select-ci-tier.mjs >> "$GITHUB_OUTPUT"',
+    );
+    expect(workflow).toContain(
+      "if: steps.change_tier.outputs.tier == 'lightweight'",
+    );
+    expect(workflow).toContain("run: pnpm ci:verify:lightweight");
+    expect(
+      workflow.match(
+        /if: steps\.change_tier\.outputs\.tier != 'lightweight'/g,
+      ) ?? [],
+    ).toHaveLength(2);
+    expect(workflow).not.toContain(
+      "if: steps.change_tier.outputs.tier == 'full'",
+    );
+    expect(workflow).toContain("run: pnpm ci:verify");
   });
 });
