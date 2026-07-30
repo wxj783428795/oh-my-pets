@@ -6,7 +6,8 @@
 
 - `src/pet-domain/`：Rust 领域层，负责宠物包模型、校验和与平台无关的核心规则。
 - `src/ui/`：Vue 3 + TypeScript 工作台和 PixiJS 宠物预览器。
-- `src-tauri/`：Tauri 2 桌面壳、macOS 窗口恢复能力、菜单栏入口和诊断导出。
+- `src-tauri/`：Tauri 2 桌面壳、版本化产品状态、macOS 登录项与窗口恢复、菜单栏
+  入口和诊断导出。
 - `assets/pets/`：声明式示例宠物包和图集资源。
 - `docs/`：设计说明、架构决策和使用文档。
 - `scripts/`：根目录工程门禁的轻量 Node 脚本及其测试。
@@ -37,8 +38,17 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 - `pnpm verify`：在 `verify:core` 后执行真实 Tauri 桌面构建与 resolved ticket 关闭证据扫描，是最终改动后的统一关闭检查。
 - `pnpm build` / `pnpm build:desktop`：调用真实 Tauri 构建；正式发布打包仍不在 macOS 预览版当前范围内。
 - `pnpm build:desktop:qa`：仅为真实 macOS 人工 QA 构建带品牌图标的本地 `.app`，不等价于正式发布打包。
-- `pnpm qa:desktop:auto`：构建并启动真实 Tauri 可执行文件，执行可自动化的最小桌面 smoke。
-- `pnpm qa:desktop`：复用最近一次已通过且桌面源码指纹与当前工作树一致的自动 smoke 报告，构建并单次启动带图标的本地 macOS `.app`，进入交互式人工 QA；必须先运行 `pnpm qa:desktop:auto`，报告缺失、无效或源码不匹配时拒绝开始，非交互环境不能把它记录为通过。
+- `pnpm qa:desktop:auto`：构建并启动真实 Tauri 可执行文件，使用
+  自有 AppKit 临时输入控件验证启动期间的前台 PID 与连续按键均保持，使用
+  `target/desktop-smoke/preferences.json` 隔离偏好，并执行可自动化的最小桌面
+  smoke；不会借用或修改用户已打开的编辑器文档。
+- `pnpm qa:desktop:focus`：构建带图标的真实 macOS `.app`，只运行启动焦点连续
+  输入回归探针；用于 Tauri、TAO 或 macOS 生命周期变更后的窄反馈。
+- `pnpm qa:desktop`：复用最近一次已通过且桌面源码指纹与当前工作树一致的自动
+  smoke 报告，构建并启动带图标的本地 macOS `.app`，进入交互式人工 QA；持久化
+  和损坏恢复项会由脚本控制测试应用重启、备份和恢复隔离偏好。必须先运行
+  `pnpm qa:desktop:auto`，报告缺失、无效或源码不匹配时拒绝开始，非交互环境
+  不能把它记录为通过。
 - `pnpm closeout:check`：扫描 resolved ticket 的结构化关闭证据；传入 `-- --ticket <path>` 可检查单票是否已具备关闭条件。
 - `pnpm scope:check`：拒绝把 prototype、research、reference 或本地生成物混入正式主线关闭范围。
 

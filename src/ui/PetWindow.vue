@@ -2,13 +2,15 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { PetRenderer } from "./pet-renderer";
-import { usePlatform } from "./platform";
-import type { PetPackPayload } from "./types";
+import { usePlatform, type UnlistenFn } from "./platform";
+import type { PetPackPayload, ProductStateSnapshot } from "./types";
 
 const petHost = ref<HTMLElement | null>(null);
 const loadFailure = ref("");
+const productState = ref<ProductStateSnapshot | null>(null);
 const renderer = new PetRenderer();
-const { emit, invoke } = usePlatform();
+const { emit, invoke, listen } = usePlatform();
+let unlistenProductState: UnlistenFn | undefined;
 
 function errorMessage(error: unknown): string {
   if (
@@ -36,6 +38,20 @@ async function reportSmoke(loaded: boolean, detail: string): Promise<void> {
 
 onMounted(async () => {
   try {
+    unlistenProductState = await listen<ProductStateSnapshot>(
+      "product-state",
+      (event) => {
+        productState.value = event.payload;
+      },
+    );
+    productState.value = await invoke<ProductStateSnapshot>(
+      "product_state_snapshot",
+    );
+  } catch {
+    // 产品状态有 Rust 安全默认值；事件 seam 的瞬时失败不能阻止宠物挂载。
+  }
+
+  try {
     let pack: PetPackPayload;
     try {
       pack = await invoke<PetPackPayload>("current_pet_pack");
@@ -58,12 +74,18 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  unlistenProductState?.();
   renderer.destroy();
 });
 </script>
 
 <template>
-  <main class="pet-surface" aria-label="桌面宠物">
+  <main
+    class="pet-surface"
+    aria-label="桌面宠物"
+    :data-pet-size="productState?.preferences.petSize ?? 'medium'"
+    :data-quiet-mode="productState?.session.quietMode ?? false"
+  >
     <div ref="petHost" class="pet-canvas" />
     <p v-if="loadFailure" class="pet-load-error" role="status">
       宠物暂时无法显示

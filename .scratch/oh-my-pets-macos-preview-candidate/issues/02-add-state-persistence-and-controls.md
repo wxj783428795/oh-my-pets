@@ -2,7 +2,7 @@
 
 Type: task
 Kind: feature
-Status: open
+Status: resolved
 Closeout-Contract: v1
 Blocked by: 01
 
@@ -80,6 +80,58 @@ Blocked by: 01
   交付路由，不改写 `main`；风险是流程资产曾表达错误 target。补救为从
   `main@6f06cc7` 建立受保护 integration、治理 PR 完整门禁、逐票 closeout 和
   最终全规格 review。
+- 2026-07-30 14:09 CST：领取本票。实施分支：
+  `codex/macos-preview-candidate-02-state-controls`；base：
+  `integration/macos-preview-candidate`；base commit：
+  `7970aedc97adaeb8a25c3fe50286446aa02eb93d`；Pull Request target：
+  `integration/macos-preview-candidate`。
+- 2026-07-30：TDD 使用已获用户批准的 ticket/spec 公共 seams：Rust 产品状态
+  命令与事件、版本化偏好存储边界、登录项平台边界、菜单与偏好设置共享状态，
+  以及真实 desktop smoke／人工 QA 报告。测试只观察这些公共边界的输入输出与
+  用户可见恢复结果，不断言内部调用顺序。
+- 2026-07-30 15:19 CST：人工 QA 发现完整应用启动会中断原 Codex 输入框的键盘
+  first responder，但前台应用 PID 没有切换。用持续输入探针复现后逐项排除默认
+  菜单、可见窗口、登录项插件和全部产品 setup；最小 Tauri 事件循环仍稳定失败。
+  当前 TAO 启动链会在 `applicationDidFinishLaunching` 中调用
+  `activateIgnoringOtherApps(true)`。进入事件循环前使用 Prohibited、setup
+  完成后切回 Accessory 后，最小探针连续三轮通过，恢复完整窗口与 Issue 02
+  setup 后用户确认 Codex 输入框不再丢焦点。长期机制、排查顺序和升级复验条件
+  固化在 `docs/adr/0002-macos-background-launch-activation-handshake.md` 与
+  `docs/desktop-recovery.md`；本票整体人工 QA 尚未完成，仍保持 `claimed`。
+- 2026-07-30 15:48 CST：首轮完整人工 QA 中，用户确认启动焦点和跨
+  Space／其他应用普通全屏可见性通过。期间观察到从全屏返回桌面后自动跳转，
+  但关闭 Oh My Pets 后仍可复现，关闭独立的 Codex 宠物后消失，因此判定为外部
+  应用干扰，不修改本产品窗口集合策略。用户同时指出“重新显示新手提示”只有状态
+  文案，容易误解为本票已实现提示界面；依据本票 Non-goals 先添加失败测试，再把
+  按钮和成功反馈改为“重置新手提示状态，提示界面将在后续体验流程接入”。首轮
+  QA 已主动中止，未生成伪通过报告；源码变化后需重跑 verify、自动 smoke 和完整
+  人工 QA。召回在宠物已经位于当前单显示器安全位置时为幂等成功，鼠标所在显示器
+  语义仍按 ticket 留给 Issue 03。
+- 2026-07-30：最终人工 QA 复核时，用户确认尺寸能即时同步，但指出当前没有自主
+  活动，无法从宠物外观验证活动频率。该行为属于后续活动调度 ticket；Issue 02
+  只交付频率状态、持久化和共享事件。因此人工契约经失败测试保护后改为验证尺寸
+  即时生效、活动频率在重开偏好设置后保持选择、登录项与系统设置一致，不再要求
+  观察未接入的自主活动或菜单项。
+- 2026-07-30 18:10 CST：最终双轴 review 首轮发现 6 个阻塞项：偏好升级写回
+  失败会中止启动、目录同步后的已提交状态会被错误回滚、登录项回滚错误被吞、
+  菜单刷新错误被吞、焦点探针失败会残留进程，以及提前实现了 Issue 03 的多显示器
+  安全区算法；另发现人工 QA 要求尚不可执行的“移动宠物”。逐项以失败测试复现后，
+  分别改为安全内存启动、区分 durable／committed-with-warning、显式回滚与系统
+  真值校正、菜单优先发布与穿透回滚、失败进程收拢，并移除多显示器算法；位置 QA
+  改为使用本票已有的“召回宠物”。Standards 与 Spec 复审均确认
+  `Blocking findings: 0`。
+- 2026-07-30 20:23 CST：最终源码上 `pnpm verify` 通过；自动 smoke 11/11，
+  连续输入焦点探针 175/100，系统登录项真值为关闭。用户在同一源码指纹
+  `79d71141a13fb8742727cd95688a106e23d4d177c130561ece2531cbad74c51f`
+  的真实 `.app` 中确认 10 项人工清单全部通过。未知版本恢复诊断
+  `oh-my-pets-diagnostics-1785413806.md` 经只读检查，说明可理解且不包含偏好
+  文件或 worktree 路径；应用持续运行到退出项并干净结束。
+- 2026-07-30 20:32 CST：实现与最终本地证据 head `49c58cc` 已在最新
+  `integration/macos-preview-candidate@7970aed` 上通过远端
+  `macOS ARM64 最终验证`（GitHub Actions run `30542546848`，6 分 16 秒）和
+  GitGuardian；Ready Pull Request #10 的 merge state 为 `CLEAN`，无未解决
+  review 对话。本票满足关闭条件并标记 `resolved`，后续只允许 merge commit
+  合入 integration。
 
 ## Closeout Evidence
 
@@ -87,28 +139,53 @@ Blocked by: 01
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: 2026-07-30 18:13 CST 在最终产品源码上通过；scope／architecture、
+  49 个 Rust 测试、145 个 Web／工程测试、2 个 Chromium E2E、lint、WebView
+  构建、release Tauri 构建与 closeout 扫描均通过。远端 head `49c58cc` 的
+  `macOS ARM64 最终验证` 于 20:32 CST 通过。
 
 ### Manual QA
 
-- Status: pending
+- Status: passed
 - Command: `pnpm qa:desktop`
-- Result: pending
+- Result: 最终 `pnpm qa:desktop:auto` 通过 11 项真实 Tauri smoke；启动焦点
+  连续输入探针收到 175 次按键，高于 100 次门槛，前台 PID 始终未变，系统登录
+  项真值为关闭。用户于 2026-07-30 20:23 CST 在同一最终源码指纹
+  `79d71141a13fb8742727cd95688a106e23d4d177c130561ece2531cbad74c51f`
+  的 `.app` 中确认 10 项人工清单全部通过；报告记录
+  `appStayedRunningUntilExitCheck=true`、`appExitedCleanly=true`、
+  `passed=true`。用户另导出的未知版本恢复诊断经只读检查，未包含偏好文件或
+  worktree 路径。
 - Reason:
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: 最终双轴复审均为 `Blocking findings: 0`。首轮 6 个阻塞项与 1 个
+  不可执行人工步骤已逐项以 TDD 修复；Standards 复审确认原子提交语义、登录项
+  回滚、菜单优先发布、鼠标穿透回滚、焦点失败进程清理与可执行人工 QA 均关闭；
+  Spec 复审确认写回失败不再阻断安全启动，且 Issue 03 的多显示器安全区算法已
+  从本票移除。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: `60c4680485958513f53c2042259c10c39860ec74`
 
 ## Answer
 
-待实施。
+Rust 统一产品状态、版本化原子偏好存储、真实 macOS 登录项、最终菜单集合与偏好
+设置骨架已经实施；持久字段和会话字段按矩阵恢复，损坏、未知版本、非法值和写回
+失败均能以可理解诊断安全运行。菜单与偏好设置共享 Rust 状态，鼠标穿透始终保留
+菜单恢复路径，启动焦点握手及连续输入回归探针已固化。
+
+本票按 Non-goals 只保存活动频率和新手提示状态；自主活动由 Issue 05 接入，
+新手提示视觉流程由 Issue 07 接入，多显示器安全区和鼠标所在显示器召回由
+Issue 03 接入。本轮未通过重启整个 Mac 验证登录后自动启动，但自动 smoke 已读取
+macOS 登录项真实状态，人工 QA 已确认界面与系统设置一致。实现、最终 verify、
+人工 QA、双轴复审、Ready Pull Request 与远端 required check 均已完成，本票
+已标记 `resolved`，等待按 merge commit 合入
+`integration/macos-preview-candidate`。

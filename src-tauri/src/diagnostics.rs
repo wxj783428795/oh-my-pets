@@ -22,6 +22,12 @@ pub struct DiagnosticsSnapshot {
     pub click_through: bool,
     pub always_on_top: bool,
     pub visible_on_all_workspaces: bool,
+    pub pet_size: String,
+    pub activity_frequency: String,
+    pub launch_at_login: bool,
+    pub quiet_mode: bool,
+    pub pet_hidden: bool,
+    pub preference_health: String,
     pub pet_pack: Option<DiagnosticsPetPack>,
     pub pet_pack_issues: Vec<ValidationIssue>,
 }
@@ -47,6 +53,12 @@ pub fn write_diagnostics(
         "- 所有工作区可见：{}",
         snapshot.visible_on_all_workspaces
     );
+    let _ = writeln!(report, "- 宠物尺寸：{}", snapshot.pet_size);
+    let _ = writeln!(report, "- 活动频率：{}", snapshot.activity_frequency);
+    let _ = writeln!(report, "- 登录时启动：{}", snapshot.launch_at_login);
+    let _ = writeln!(report, "- 安静模式：{}", snapshot.quiet_mode);
+    let _ = writeln!(report, "- 宠物隐藏：{}", snapshot.pet_hidden);
+    let _ = writeln!(report, "- 偏好状态：{}", snapshot.preference_health);
     if let Some(pack) = snapshot.pet_pack.as_ref() {
         let _ = writeln!(
             report,

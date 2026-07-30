@@ -31,6 +31,8 @@ export function startupFocusPreserved({
   beforePid,
   appPid,
   observedPids,
+  typedCount,
+  minimumTypedCount,
 }) {
   return (
     Number.isInteger(beforePid) &&
@@ -38,8 +40,39 @@ export function startupFocusPreserved({
     beforePid !== appPid &&
     Array.isArray(observedPids) &&
     observedPids.length > 0 &&
-    observedPids.every((pid) => Number.isInteger(pid) && pid === beforePid)
+    observedPids.every((pid) => Number.isInteger(pid) && pid === beforePid) &&
+    Number.isInteger(typedCount) &&
+    Number.isInteger(minimumTypedCount) &&
+    minimumTypedCount > 0 &&
+    typedCount >= minimumTypedCount
   );
+}
+
+function processIsRunning(process) {
+  return process.exitCode === null && process.signalCode === null;
+}
+
+export async function finishProbedProcess({
+  evidence,
+  target,
+  completion,
+}) {
+  try {
+    const startupFocus = await evidence;
+    startupFocus.preserved = startupFocusPreserved(startupFocus);
+    await completion;
+    return startupFocus;
+  } catch (error) {
+    if (processIsRunning(target)) {
+      target.kill();
+    }
+    await Promise.resolve(completion).catch(() => {});
+    throw error;
+  } finally {
+    if (processIsRunning(target)) {
+      target.kill();
+    }
+  }
 }
 
 export function desktopExecutablePath({

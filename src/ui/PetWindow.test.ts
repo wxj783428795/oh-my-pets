@@ -5,7 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import PetWindow from "./PetWindow.vue";
 import { platformKey, type Platform } from "./platform";
-import type { PetPackPayload } from "./types";
+import type { PetPackPayload, ProductStateSnapshot } from "./types";
 
 type InvokeMock = (
   command: string,
@@ -17,6 +17,38 @@ const { rendererDestroy, rendererMount } = vi.hoisted(() => ({
   rendererDestroy: vi.fn<() => void>(),
   rendererMount: vi.fn<() => Promise<void>>(() => Promise.resolve()),
 }));
+
+let productStateListener:
+  | ((event: {
+      event: string;
+      id: number;
+      payload: ProductStateSnapshot;
+    }) => void)
+  | undefined;
+
+function productSnapshot(): ProductStateSnapshot {
+  return {
+    preferences: {
+      petSize: "medium",
+      activityFrequency: "standard",
+      launchAtLogin: false,
+      lastValidPosition: null,
+      onboardingSeen: false,
+    },
+    session: {
+      quietMode: false,
+      petHidden: false,
+      clickThrough: false,
+      currentAction: "idle",
+      velocity: { x: 0, y: 0 },
+      behaviorTimerMs: null,
+    },
+    preferenceHealth: {
+      kind: "healthy",
+      message: "偏好已加载",
+    },
+  };
+}
 
 vi.mock("./pet-renderer", () => ({
   PetRenderer: class {
@@ -64,15 +96,15 @@ function createPack(): PetPackPayload {
   };
 }
 
-function platform(
-  invoke: InvokeMock,
-  emit: EmitMock,
-): Platform {
+function platform(invoke: InvokeMock, emit: EmitMock): Platform {
   return {
     async invoke<T>(
       command: string,
       args?: Record<string, unknown>,
     ): Promise<T> {
+      if (command === "product_state_snapshot") {
+        return productSnapshot() as T;
+      }
       return (await (args === undefined
         ? invoke(command)
         : invoke(command, args))) as T;
@@ -80,8 +112,13 @@ function platform(
     async emit<T>(event: string, payload?: T): Promise<void> {
       await emit(event, payload);
     },
-    async listen() {
-      return () => undefined;
+    async listen(event, listener) {
+      if (event === "product-state") {
+        productStateListener = listener as typeof productStateListener;
+      }
+      return () => {
+        productStateListener = undefined;
+      };
     },
     getCurrentWindow: () => ({
       async onDragDropEvent() {
@@ -96,6 +133,7 @@ afterEach(() => {
   rendererDestroy.mockReset();
   rendererMount.mockReset();
   rendererMount.mockResolvedValue(undefined);
+  productStateListener = undefined;
 });
 
 describe("宠物产品表面", () => {
@@ -176,6 +214,37 @@ describe("宠物产品表面", () => {
         detail: "WebGL 不可用",
       }),
     );
+    wrapper.unmount();
+  });
+
+  test("尺寸和安静模式只跟随 Rust 产品状态快照与事件", async () => {
+    const wrapper = mount(PetWindow, {
+      global: {
+        provide: {
+          [platformKey as symbol]: platform(
+            vi.fn<InvokeMock>().mockResolvedValue(createPack()),
+            vi.fn<EmitMock>().mockResolvedValue(undefined),
+          ),
+        },
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.get("main").attributes("data-pet-size")).toBe("medium");
+    expect(wrapper.get("main").attributes("data-quiet-mode")).toBe("false");
+
+    const next = productSnapshot();
+    next.preferences.petSize = "small";
+    next.session.quietMode = true;
+    productStateListener?.({
+      event: "product-state",
+      id: 1,
+      payload: next,
+    });
+    await flushPromises();
+
+    expect(wrapper.get("main").attributes("data-pet-size")).toBe("small");
+    expect(wrapper.get("main").attributes("data-quiet-mode")).toBe("true");
     wrapper.unmount();
   });
 });

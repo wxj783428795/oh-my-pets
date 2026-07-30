@@ -46,6 +46,48 @@ fn wait_for_window_surface(window: &WebviewWindow, surface: &str, timeout: Durat
     }
 }
 
+fn record_product_state_startup(
+    report: &mut DesktopSmokeReport,
+    app: &AppHandle,
+    state: &AppState,
+) {
+    match state.product.snapshot() {
+        Ok(snapshot)
+            if !snapshot.session.quiet_mode
+                && !snapshot.session.pet_hidden
+                && !snapshot.session.click_through
+                && snapshot.session.current_action == "idle"
+                && snapshot.session.velocity.x == 0.0
+                && snapshot.session.velocity.y == 0.0
+                && snapshot.session.behavior_timer_ms.is_none() =>
+        {
+            report.pass(
+                "product_state_startup_reset",
+                "真实进程只恢复持久偏好，会话状态以可见、可交互、非安静和 idle 启动",
+            );
+        }
+        Ok(snapshot) => report.fail(
+            "product_state_startup_reset",
+            format!("启动会话状态未重置：{:?}", snapshot.session),
+        ),
+        Err(error) => report.fail("product_state_startup_reset", error),
+    }
+
+    let login_item = SystemLoginItem::new(app);
+    match (login_item.is_enabled(), state.product.snapshot()) {
+        (Ok(observed), Ok(snapshot)) if observed == snapshot.preferences.launch_at_login => {
+            report.pass(
+                "login_item_truth",
+                format!("系统登录项真实状态与产品状态一致：{observed}"),
+            );
+        }
+        (observed, snapshot) => report.fail(
+            "login_item_truth",
+            format!("系统登录项={observed:?}，产品状态={snapshot:?}"),
+        ),
+    }
+}
+
 fn run_desktop_smoke(app: &AppHandle) -> DesktopSmokeReport {
     let mut report = DesktopSmokeReport::new(app.package_info().version.to_string());
 
@@ -101,6 +143,8 @@ fn run_desktop_smoke(app: &AppHandle) -> DesktopSmokeReport {
     }
 
     let state = app.state::<AppState>();
+    record_product_state_startup(&mut report, app, state.inner());
+
     match current_pet_pack_inner(state.inner()) {
         Ok(payload) if payload.summary.action_count > 0 && payload.summary.frame_count > 0 => {
             report.pass(
@@ -157,6 +201,10 @@ fn run_desktop_smoke(app: &AppHandle) -> DesktopSmokeReport {
                 .map(|visible| !visible)
                 .map_err(|error| CommandError::shell(error.to_string()))
         });
+    let hidden_state = state
+        .product
+        .snapshot()
+        .is_ok_and(|snapshot| snapshot.session.pet_hidden);
     let restored = handle_tray_menu(app, MENU_SHOW_PET)
         .and_then(|_| {
             thread::sleep(Duration::from_millis(100));
@@ -167,6 +215,10 @@ fn run_desktop_smoke(app: &AppHandle) -> DesktopSmokeReport {
                 .is_visible()
                 .map_err(|error| CommandError::shell(error.to_string()))
         });
+    let restored_state = state
+        .product
+        .snapshot()
+        .is_ok_and(|snapshot| !snapshot.session.pet_hidden);
     match (hidden, restored) {
         (Ok(true), Ok(true)) => report.pass(
             "pet_hide_and_menu_restore",
@@ -176,6 +228,30 @@ fn run_desktop_smoke(app: &AppHandle) -> DesktopSmokeReport {
             "pet_hide_and_menu_restore",
             format!("隐藏结果={hidden:?}，恢复结果={restored:?}"),
         ),
+    }
+
+    let quiet_enabled = handle_tray_menu(app, MENU_ENABLE_QUIET).is_ok()
+        && state
+            .product
+            .snapshot()
+            .is_ok_and(|snapshot| snapshot.session.quiet_mode);
+    let quiet_disabled = handle_tray_menu(app, MENU_DISABLE_QUIET).is_ok()
+        && state
+            .product
+            .snapshot()
+            .is_ok_and(|snapshot| !snapshot.session.quiet_mode);
+    if hidden_state && restored_state && quiet_enabled && quiet_disabled {
+        report.pass(
+            "product_state_and_menu_sync",
+            "菜单操作与 Rust 产品状态双向一致，测试结束已恢复可见和非安静状态",
+        );
+    } else {
+        report.fail(
+            "product_state_and_menu_sync",
+            format!(
+                "隐藏={hidden_state}，恢复={restored_state}，安静开启={quiet_enabled}，安静退出={quiet_disabled}"
+            ),
+        );
     }
 
     let first_open = handle_tray_menu(app, MENU_OPEN_PREFERENCES)
