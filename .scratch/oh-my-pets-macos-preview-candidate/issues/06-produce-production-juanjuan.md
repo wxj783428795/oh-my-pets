@@ -2,7 +2,7 @@
 
 Type: task
 Kind: feature
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: none
 
@@ -181,7 +181,7 @@ Blocked by: none
 ### Manual QA
 
 - Status: passed
-- Command: `pnpm qa:desktop:auto`；`pnpm qa:desktop`
+- Command: `pnpm qa:desktop`
 - Result: 自动 smoke 11 项全部通过；交互式 QA 11 项全部通过，报告
   `target/desktop-smoke/manual-qa.json` 的 `passed=true`、
   `appStayedRunningUntilExitCheck=true`、`appExitedCleanly=true`，自动与人工
@@ -202,9 +202,12 @@ Blocked by: none
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: `95acee5a216e9e49db746aca17a26a5134a17dbb`
 
 ## Answer
 
-待实施。
+已完成正式“卷卷”宠物包制作与集成：原创橘白短腿圆头粗卷尾角色具备 15 个
+动作、86 个独立帧、`320×320` 标准画布和单图集，正式资源、来源／使用权说明、
+确定性组装器、机械校验、接触表、动效预览、Chromium 视觉基线及真实桌面 QA
+均已交付并通过验收。
