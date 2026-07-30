@@ -8,12 +8,15 @@
 ## 核心原则
 
 1. `main` 是唯一永久主线，必须始终保持已验证、可集成和可作为新工作的基线。
+   它记录已经交付的产品事实和已经生效的工程治理，不接收尚未获准实施或尚未
+   达到交付条件的产品规划。
 2. 正常变更不得直接提交或 push 到 `main`、`integration/*` 等受保护分支。
 3. 一张实施 ticket 对应一个主要实施分支和一个主要 Pull Request；无关改动
    不得夹带。bugfix 向其他受影响维护线前向同步时，可以建立额外同步 PR，但
    必须回链原 bug ticket。
-4. 独立且完成后即可交付的小票直接以 `main` 为目标；跨多票且中间状态不适合
-   进入 `main` 的 accepted spec 使用临时 `integration/<spec>`。
+4. 规划阶段使用短期 `codex/plan-<effort>` 隔离；规划获准实施后，独立且完成
+   后即可交付的小票以 `main` 为目标，跨多票且中间状态不适合进入 `main` 的
+   accepted spec 使用临时 `integration/<spec>`。
 5. 分支依赖必须通过 ticket、spec 和 Pull Request 的 base 显式表达，禁止靠
    ticket 分支互相合并形成不可见的依赖链。
 6. 所有目标分支使用相同的最终 CI 门禁；`main` push 上的 CI 是合并后审计，
@@ -25,7 +28,8 @@
 | 分支                             | 生命周期 | 创建基线                     | 接收什么                                     | 结束条件                   |
 | -------------------------------- | -------- | ---------------------------- | -------------------------------------------- | -------------------------- |
 | `main`                           | 永久     | 不适用                       | 已完成专题、独立小票、bugfix 和流程变更的 PR | 不删除、不重写             |
-| `integration/<spec>`             | 临时     | 最新 `main`                  | 同一 accepted spec 的 ticket PR              | 最终 PR 合入 `main` 后删除 |
+| `codex/plan-<effort>`            | 短期     | 最新 `main`                  | 研究结论、决策、spec 和 ticket               | 规划迁移或取消后删除       |
+| `integration/<spec>`             | 临时     | 最新 `main`                  | 已接受规划和同一 spec 的 ticket PR           | 最终 PR 合入 `main` 后删除 |
 | `codex/<effort>-<ticket>-<slug>` | 短期     | 对应 `main` 或 integration   | 一张 agent 实施 ticket                       | PR 合并后删除              |
 | `codex/fix-<ticket>-<slug>`      | 短期     | 缺陷实际存在的目标分支       | 普通 bugfix                                  | PR 合并后删除              |
 | `codex/hotfix-<ticket>-<slug>`   | 短期     | 最新 `main` 或受支持 release | 紧急生产／候选版修复                         | PR 合并并前向同步后删除    |
@@ -40,6 +44,43 @@
 effort 或 ticket 标识和可识别的短 slug；禁止使用 `tmp`、`test`、`new` 等无法
 说明归属的名字。
 
+## 规划成熟度与分支转换
+
+规划分支和 integration 表达不同成熟度，不是两条并行主线：
+
+- `codex/plan-<effort>` 只承载 grilling、wayfinder、研究结论、ADR 草案、spec、
+  map 和 tickets，不实施正式产品功能。多会话规划应提交到该分支；需要远端备份
+  时可以 push，但在尚未批准实施时不得以 `main` 为合并目标。
+- worktree 只提供工作目录隔离，不承载流程状态。规划是否存在、是否被接受和
+  是否已经迁移，必须由分支、提交以及 spec/ticket 状态表达。
+- 规划尚未收口、仍有会改变实现方向的问题，或用户尚未批准实施时，不创建
+  `integration/*`，也不把规划资产提前合入 `main`。
+- 规划获准后，先按工作规模选择交付路径，再结束 planning 分支。不得同时长期
+  维护 planning 和 integration，也不得让 ticket 分支持续依赖 planning 分支。
+
+独立小票或单会话小改动直接交付到 `main` 时：
+
+1. 从最新 `main` 创建正式实施分支。
+2. 将已接受的纯规划提交明确迁移到实施分支，与实现和验证一起进入同一个
+   Pull Request；不得直接在 planning 分支上继续实现。
+3. 确认迁移完整后删除 planning 分支。
+
+跨多票且中间状态不可交付时：
+
+1. 只有在 spec 已 accepted、tickets 已可领取且用户已经批准开始实施后，才从
+   最新 `main` 创建 `integration/<spec>` 并配置临时 ruleset。
+2. 以 planning 分支为 head、integration 为 base 建立一次 planning bootstrap
+   Pull Request，把已接受的 spec、map、tickets 和适用决策迁入 integration。
+3. bootstrap PR 通过等价门禁并合并后立即删除 planning 分支；后续 ticket
+   只从最新 integration 创建并 PR 回 integration。
+4. 专题整体达到交付条件后，integration 通过最终 Pull Request 进入 `main`，
+   随后删除 integration。
+
+如果规划被取消，保留必要的取消结论或后续入口后删除 planning 分支；不得为了
+“保存规划”而把未接受的产品承诺合入 `main`。希望长期沉淀但不代表交付状态的
+讨论材料，应放在 issue、研究记录或专门的决策载体中，不把 planning 分支变成
+永久档案。
+
 ## 每次进入新开发的硬门槛
 
 每次新的实施、bugfix、hotfix、流程或正式文档工作都必须依次完成以下检查；
@@ -48,8 +89,8 @@ effort 或 ticket 标识和可识别的短 slug；禁止使用 `tmp`、`test`、
 1. 运行 `git status --short --branch` 和 `git worktree list`，确认当前分支、
    未提交内容和现有 worktree。用户已有改动不得被移动、覆盖、清理或带入新
    分支；当前工作树不干净时，使用独立 worktree。
-2. 按“独立小票、多票 spec、main bug、integration bug、hotfix、docs/process”
-   分类工作，确定唯一 base 和 Pull Request target。
+2. 按“规划、独立小票、多票 spec、main bug、integration bug、hotfix、
+   docs/process”分类工作，确定唯一 base 和 Pull Request target。
 3. 更新远端引用并确认 base 是计划使用的最新受保护分支；不得从一个陈旧 topic
    分支派生无关工作。
 4. 按 `engineering-flow.md` 读取 `CONTEXT.md`、适用 ADR、spec 和 ticket。
@@ -85,6 +126,7 @@ main
 临时 `integration/<spec>` 只在以下条件同时满足时创建：
 
 - 已有 accepted spec 和多张带显式 blocking edges 的实施 ticket；
+- 用户已明确批准开始实施，而不只是批准继续规划；
 - 单张 ticket 的中间状态不适合独立进入 `main`；
 - spec 或 map 明确 integration 名称、最终整合 ticket 和删除时机；
 - 可以为该精确分支配置与 `main` 等价的远端门禁。
@@ -93,7 +135,8 @@ main
 
 ```text
 main
-  └── integration/<spec>
+  ├── codex/plan-<effort> ── bootstrap PR ──┐
+  └── integration/<spec> <──────────────────┘
         ├── codex/<ticket-01>-<slug> -> PR + gate ──┐
         ├── codex/<ticket-02>-<slug> -> PR + gate ──┼─> integration/<spec>
         └── codex/<ticket-N>-<slug>  -> PR + gate ──┘
@@ -101,6 +144,8 @@ main
 integration/<spec> -> 最终 PR + main gate -> main -> 删除 integration
 ```
 
+- bootstrap PR 只迁移已接受的规划资产，不夹带正式产品实现；合并后删除
+  planning 分支，不能让它继续充当 ticket base。
 - integration 从最新 `main` 创建，只接收同一 spec 的 ticket；不得混入其他
   feature、独立 bug 或顺手重构。
 - 每张 ticket 从最新 integration 创建，仍需自己的 TDD、最终 `pnpm verify`、
