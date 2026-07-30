@@ -19,7 +19,8 @@
    accepted spec 使用临时 `integration/<spec>`。
 5. 分支依赖必须通过 ticket、spec 和 Pull Request 的 base 显式表达，禁止靠
    ticket 分支互相合并形成不可见的依赖链。
-6. 所有受保护目标分支使用相同的最终 CI 门禁；验证通过 Pull Request 在合并前
+6. 所有受保护目标分支使用相同的 required CI job；纯文档/流程资产 PR 可以在
+   该 job 内走轻量门禁，其他变更走完整门禁。验证通过 Pull Request 在合并前
    完成，合并后的目标分支 push 不重复运行相同验证，必要时使用手动触发复查。
 7. 流程例外必须获得用户明确批准，并记录原因、范围、风险和补救验证。
 

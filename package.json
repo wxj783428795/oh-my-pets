@@ -6,6 +6,7 @@
   "scripts": {
     "architecture:check": "node scripts/check-architecture.mjs",
     "ci:bootstrap": "pnpm install --frozen-lockfile && pnpm test:e2e:install",
+    "ci:verify:lightweight": "pnpm scope:check && pnpm closeout:check",
     "ci:verify": "pnpm ci:bootstrap && pnpm verify",
     "doctor:desktop": "node scripts/doctor.mjs",
     "dev": "tauri dev",

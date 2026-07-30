@@ -32,19 +32,32 @@ jobs:
           node-version-file: .node-version
           package-manager-cache: false
 
+      - name: 选择验证层级
+        id: change_tier
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/select-ci-tier.mjs >> "$GITHUB_OUTPUT"
+
       - name: 启用固定 pnpm
         run: |
           corepack enable
           corepack prepare pnpm@10.27.0 --activate
           pnpm --version
 
+      - name: 执行轻量流程门禁
+        if: steps.change_tier.outputs.tier == 'lightweight'
+        run: pnpm ci:verify:lightweight
+
       - name: 启用固定 Rust
+        if: steps.change_tier.outputs.tier != 'lightweight'
         run: |
           rustup show active-toolchain
           rustc --version
           cargo --version
 
       - name: 从干净环境执行最终验证
+        if: steps.change_tier.outputs.tier != 'lightweight'
         run: pnpm ci:verify
 
       - name: 上传失败诊断
