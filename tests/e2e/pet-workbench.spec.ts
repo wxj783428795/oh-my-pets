@@ -117,3 +117,74 @@ test("15 个正式动作的首帧都经真实 PixiJS Canvas 渲染", async ({ pa
     previousFrame = (await canvas.screenshot()).toString("base64");
   }
 });
+
+test("真实宠物表面保留完整卷尾", async ({ baseURL, browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 320, height: 320 },
+    deviceScaleFactor: 2,
+    locale: "zh-CN",
+    timezoneId: "Asia/Shanghai",
+    colorScheme: "dark",
+    reducedMotion: "reduce",
+    serviceWorkers: "block",
+  });
+  const page = await context.newPage();
+  await page.clock.install({
+    time: new Date("2026-07-29T04:00:00.000Z"),
+  });
+  await page.goto(`${baseURL}/?surface=pet&browserTestQuietMode=1`);
+
+  const canvas = page.locator(".pet-canvas canvas");
+  await expect(canvas).toBeVisible();
+  await expect(canvas).toHaveCSS("width", "320px");
+  await expect(canvas).toHaveCSS("height", "320px");
+  await expect(canvas).toHaveScreenshot("juanjuan-pet-retina.png", {
+    animations: "disabled",
+    caret: "hide",
+    scale: "css",
+    threshold: 0,
+    maxDiffPixels: 0,
+  });
+  await context.close();
+});
+
+test("真实宠物表面持续播放待机逐帧", async ({ page }) => {
+  await page.clock.install({
+    time: new Date("2026-07-29T04:00:00.000Z"),
+  });
+  await page.goto("/?surface=pet");
+
+  const canvas = page.locator(".pet-canvas canvas");
+  await expect(canvas).toBeVisible();
+  const firstFrame = (await canvas.screenshot()).toString("base64");
+  await page.clock.runFor(721);
+  await expect
+    .poll(async () => (await canvas.screenshot()).toString("base64"), {
+      message: "真实宠物表面必须在 idle_00 的首帧时长结束后显示下一帧",
+    })
+    .not.toBe(firstFrame);
+});
+
+test("偏好设置在内容高于窗口时可滚动到高级入口", async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 650 });
+  await page.goto("/?surface=preferences");
+
+  const surface = page.locator(".preferences-surface");
+  await expect(page.getByRole("heading", { name: "偏好设置" })).toBeVisible();
+  await expect
+    .poll(() =>
+      surface.evaluate(
+        (element) => element.scrollHeight > element.clientHeight,
+      ),
+    )
+    .toBe(true);
+
+  await surface.hover();
+  await page.mouse.wheel(0, 900);
+  await expect
+    .poll(() => surface.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  await expect(
+    page.getByRole("heading", { name: "高级开发预览" }),
+  ).toBeInViewport();
+});

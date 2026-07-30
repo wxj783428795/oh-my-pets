@@ -2,7 +2,7 @@
 
 Type: task
 Kind: feature
-Status: resolved
+Status: claimed
 Closeout-Contract: v1
 Blocked by: none
 
@@ -153,6 +153,22 @@ Blocked by: none
   文本，因此只把语义状态作为功能证据，视觉仍以 Chromium 基线、接触表、
   动效预览和用户此前明确确认作为准据。最终交互式 QA 的退出项由 Computer
   Use 实际点击 `Quit Oh My Pets` 后再确认，报告记录进程干净结束。
+- 2026-07-31 06:22:54 +0800：用户在 PR #11 尚未合并时复查真实 `.app`，
+  发现三项阻塞缺陷：中号宠物的卷尾在透明窗口右边界被裁切；真实宠物窗口只
+  显示静态帧；偏好设置内容高于窗口时无法滚动到 `ADVANCED` 区域。本票重新
+  置为 `claimed`，继续使用原独立 worktree、原 Issue 06 分支和原 PR target；
+  此前 closeout 的 verify、人工 QA、双轴 review 与提交证据对新增修复失效。
+  修复必须保持“不实现自主行为调度或窗口运动”的边界，只让真实宠物窗口消费
+  声明式逐帧 idle 动画。
+- 2026-07-31 06:36:03 +0800：修复前先记录 approved spec 的公共验证 seams：
+  资源本体继续由 `pnpm pet:assets:check` 证明标准画布和透明边界；真实宠物
+  表面由 DPR 2 Chromium 基线证明 `idle_00` 卷尾完整且 Canvas CSS 尺寸仍为
+  `320×320`，由受控时钟证明首帧时长结束后换帧；偏好设置由真实页面滚动到
+  `ADVANCED` 入口证明。红灯分别为：Tauri 的 `BTreeMap` 字典序首帧落到尾巴
+  越界的 `curious_00`、宠物表面从未调用 `play`、滚动容器因 `min-height`
+  随内容增长而无溢出。按 TDD 小切片修正为显式 `idle_00` 初始帧、仅消费
+  声明式 idle 的持续播放并响应安静模式、固定视口高度的纵向滚动容器；6 项
+  Chromium E2E 全绿，新增 Retina expected 已人工查看为完整卷尾。
 - 2026-07-30：用户明确把正式美术交给 Codex，并确认保留现有身份锚点、重新
   设计原创扁平 2D 风格。规划 Pull Request 合入 `main` 后，本票与
   `Issue 01` 构成首批可领取 frontier。
@@ -171,43 +187,28 @@ Blocked by: none
 
 ### Verify
 
-- Status: passed
+- Status: pending
 - Command: `pnpm verify`
-- Result: 最后相关产品改动后通过；正式范围与架构检查、15 动作／86 帧机械
-  资源校验、Rust workspace、19 个 Vitest 文件共 153 项、3 项真实 Chromium
-  E2E／视觉基线、Rust/Web lint、WebView 与真实 Tauri release 构建及 closeout
-  扫描全部通过。
+- Result: 用户复查后重开，待最后相关修复完成后重跑。
 
 ### Manual QA
 
-- Status: passed
+- Status: pending
 - Command: `pnpm qa:desktop`
-- Result: 自动 smoke 11 项全部通过；交互式 QA 11 项全部通过，报告
-  `target/desktop-smoke/manual-qa.json` 的 `passed=true`、
-  `appStayedRunningUntilExitCheck=true`、`appExitedCleanly=true`，自动与人工
-  报告共享最终源码指纹
-  `6a769f0c54f8e801055a5f7156f6cfd2fdf06057e8ca11834fc819a834718590`。
-- Reason: 新增的卷卷视觉与三档尺寸由用户在本顶层会话明确确认；用户要求旧的
-  通用桌面项改由脚本或 Computer Use 验证，因此窗口、菜单、恢复、偏好、
-  点击穿透和诊断项复用本轮真实 `qa:desktop:auto`、既有用户确认与重新执行的
-  Computer Use 功能证据，未重复提问；最终退出由 Computer Use 直接操作。
+- Result: 用户复查后重开，待 Computer Use 与真实桌面 QA 重新验证三项缺陷。
+- Reason:
 
 ### Review
 
-- Standards: passed
-- Spec: passed
-- Notes: 双轴复审均无阻塞项。首轮发现的动作 E2E 时钟未冻结、视觉测试文档边界、
-  `rare_1` 末帧纸团叙事和 `land` 灰尘可见性均已修正并复审通过；生成器与独立
-  机械校验器之间存在非阻塞的动作契约重复，保留为相互校验的事实源。
+- Standards: pending
+- Spec: pending
+- Notes: 用户复查后重开，待新增修复完成后重新执行双轴 review。
 
 ### Commit
 
-- Status: committed
-- Hash: `95acee5a216e9e49db746aca17a26a5134a17dbb`
+- Status: pending
+- Hash: pending
 
 ## Answer
 
-已完成正式“卷卷”宠物包制作与集成：原创橘白短腿圆头粗卷尾角色具备 15 个
-动作、86 个独立帧、`320×320` 标准画布和单图集，正式资源、来源／使用权说明、
-确定性组装器、机械校验、接触表、动效预览、Chromium 视觉基线及真实桌面 QA
-均已交付并通过验收。
+修复中。

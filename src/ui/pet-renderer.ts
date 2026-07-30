@@ -57,7 +57,9 @@ export class PetRenderer {
       );
     }
 
-    const firstFrame = Object.keys(pack.atlas.frames)[0];
+    const firstFrame =
+      pack.manifest.actions.idle?.frames[0]?.ref ??
+      Object.keys(pack.atlas.frames)[0];
     const texture = this.textures.get(firstFrame);
     if (!texture) {
       throw new Error("图集没有可渲染帧");

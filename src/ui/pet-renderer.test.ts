@@ -179,6 +179,25 @@ describe("宠物动作播放", () => {
     renderer.destroy();
   });
 
+  it("初始帧来自 idle 动作而不是图集对象的字典序首项", async () => {
+    const renderer = new PetRenderer();
+    const pack = createPack();
+    pack.manifest.actions.idle = {
+      loop: true,
+      frames: [{ ref: "first", durationMs: 10 }],
+      cuePoints: [],
+    };
+    pack.atlas.frames = {
+      second: pack.atlas.frames.second,
+      first: pack.atlas.frames.first,
+    };
+
+    await renderer.mount(document.createElement("div"), pack);
+
+    expect(renderedFrames.at(-1)).toBe(0);
+    renderer.destroy();
+  });
+
   it("按动作声明决定停在末帧或循环播放", async () => {
     vi.useFakeTimers();
     const renderer = new PetRenderer();

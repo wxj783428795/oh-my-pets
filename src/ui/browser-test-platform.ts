@@ -10,6 +10,7 @@ import type {
   ShellSnapshot,
 } from "./types";
 
+const browserTestParameters = new URLSearchParams(window.location.search);
 const shell: ShellSnapshot = {
   clickThrough: false,
   alwaysOnTop: true,
@@ -24,7 +25,7 @@ const productState: ProductStateSnapshot = {
     onboardingSeen: false,
   },
   session: {
-    quietMode: false,
+    quietMode: browserTestParameters.get("browserTestQuietMode") === "1",
     petHidden: false,
     clickThrough: false,
     currentAction: "idle",
@@ -54,11 +55,7 @@ function publishProductState(): void {
 }
 let revision = 0;
 let initialPackFailuresRemaining =
-  new URLSearchParams(window.location.search).get(
-    "browserTestInitialPackFailure",
-  ) === "1"
-    ? 2
-    : 0;
+  browserTestParameters.get("browserTestInitialPackFailure") === "1" ? 2 : 0;
 let fixturePromise:
   | Promise<{
       manifest: PetManifest;
@@ -87,10 +84,26 @@ async function readFixture(): Promise<{
 
 async function createPack(currentRevision: number): Promise<PetPackPayload> {
   const { atlas, manifest } = await readFixture();
+  const sortedAtlas = {
+    ...atlas,
+    frames: Object.fromEntries(
+      Object.entries(atlas.frames).toSorted(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    ),
+  };
+  const sortedManifest = {
+    ...manifest,
+    actions: Object.fromEntries(
+      Object.entries(manifest.actions).toSorted(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    ),
+  };
   return {
     revision: currentRevision,
-    manifest,
-    atlas,
+    manifest: sortedManifest,
+    atlas: sortedAtlas,
     summary: {
       id: manifest.id,
       version: manifest.version,

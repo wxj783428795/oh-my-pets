@@ -20,7 +20,15 @@
 
 `pnpm lint:web` 中 Oxlint 只检查 `src/ui`、`scripts`、`tests/e2e` 和根 Vite/Playwright 配置，并显式排除辅助资产与生成物；它能够分析 Vue `<script>`，但不补齐 template 专用规则。`vue-tsc --noEmit` 继续承担 Vue/TypeScript 类型检查，二者任一失败都会阻断该命令。
 
-`pnpm test:e2e` 使用固定 Playwright 与单一 Chromium，在 900×760 viewport、DPR 1、固定 locale/timezone/color scheme/reduced-motion 和固定时间下加载仓库内卷卷宠物包。它比较真实 PixiJS WebGL Canvas 的平台专属 expected 基线，并验证一次受控加载失败后的重新加载恢复。常规配置使用 `updateSnapshots: "none"`；只有 `pnpm test:e2e:update` 能显式更新变化的基线。expected 基线位于 `tests/e2e/**-snapshots/`，actual/diff、trace、HTML report 和浏览器缓存位于被忽略的 `target/playwright/`。详细边界见 `docs/visual-testing.md`。
+`pnpm test:e2e` 使用固定 Playwright 与单一 Chromium；默认场景固定在
+900×760 viewport、DPR 1，并为真实宠物表面增加独立的 320×320、DPR 2
+Retina 场景，locale/timezone/color scheme/reduced-motion 和时间均受控。
+它比较真实 PixiJS WebGL Canvas 的平台专属 expected 基线，并有限验证加载
+恢复、15 动作首帧、真实宠物 idle 换帧和偏好页滚动。常规配置使用
+`updateSnapshots: "none"`；只有 `pnpm test:e2e:update` 能显式更新变化的基线。
+expected 基线位于 `tests/e2e/**-snapshots/`，actual/diff、trace、HTML report
+和浏览器缓存位于被忽略的 `target/playwright/`。详细边界见
+`docs/visual-testing.md`。
 
 该套件是 Web/UI 与 renderer E2E：浏览器测试 seam 只提供固定 Tauri command 输入，不运行 Rust backend、WKWebView、菜单栏、透明窗口合成或操作系统交互。因此它不重复也不替代 `pnpm qa:desktop:auto` 和 `pnpm qa:desktop`。
 

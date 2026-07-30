@@ -11,6 +11,9 @@ const productState = ref<ProductStateSnapshot | null>(null);
 const renderer = new PetRenderer();
 const { emit, invoke, listen } = usePlatform();
 let unlistenProductState: UnlistenFn | undefined;
+let mountedPack: PetPackPayload | null = null;
+let idlePlaybackStarted = false;
+let idlePlaybackToken = 0;
 
 function errorMessage(error: unknown): string {
   if (
@@ -36,12 +39,53 @@ async function reportSmoke(loaded: boolean, detail: string): Promise<void> {
   }
 }
 
+function stopIdlePlayback(): void {
+  idlePlaybackToken += 1;
+  idlePlaybackStarted = false;
+  renderer.stop();
+}
+
+function startIdlePlayback(): void {
+  if (
+    idlePlaybackStarted ||
+    !mountedPack?.manifest.actions.idle ||
+    productState.value?.session.quietMode
+  ) {
+    return;
+  }
+  idlePlaybackStarted = true;
+  const token = ++idlePlaybackToken;
+  void renderer
+    .play("idle", Number.POSITIVE_INFINITY)
+    .catch(async (error: unknown) => {
+      if (token !== idlePlaybackToken) {
+        return;
+      }
+      loadFailure.value = errorMessage(error);
+      await reportSmoke(false, loadFailure.value);
+    })
+    .finally(() => {
+      if (token === idlePlaybackToken) {
+        idlePlaybackStarted = false;
+      }
+    });
+}
+
+function syncIdlePlayback(): void {
+  if (productState.value?.session.quietMode) {
+    stopIdlePlayback();
+  } else {
+    startIdlePlayback();
+  }
+}
+
 onMounted(async () => {
   try {
     unlistenProductState = await listen<ProductStateSnapshot>(
       "product-state",
       (event) => {
         productState.value = event.payload;
+        syncIdlePlayback();
       },
     );
     productState.value = await invoke<ProductStateSnapshot>(
@@ -63,6 +107,8 @@ onMounted(async () => {
       throw new Error("宠物窗口渲染容器不存在");
     }
     await renderer.mount(petHost.value, pack);
+    mountedPack = pack;
+    syncIdlePlayback();
     await reportSmoke(
       true,
       `${pack.summary.displayName} ${pack.summary.version} 已挂载到宠物窗口`,
@@ -75,6 +121,8 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   unlistenProductState?.();
+  mountedPack = null;
+  stopIdlePlayback();
   renderer.destroy();
 });
 </script>
