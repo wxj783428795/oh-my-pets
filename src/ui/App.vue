@@ -266,7 +266,7 @@ async function toggleClickThrough(): Promise<void> {
       enabled: !shell.value.clickThrough,
     });
     status.value = shell.value.clickThrough
-      ? "点击穿透已开启。请从菜单栏选择“关闭点击穿透”恢复交互。"
+      ? "点击穿透已开启。可在此直接关闭；若已收起，请从菜单栏重新打开偏好设置并进入高级开发预览。"
       : "点击穿透已关闭。";
   } catch (error) {
     status.value = normalizeError(error).message;
@@ -317,7 +317,7 @@ async function handleReloadedPack(payload: PetPackPayload): Promise<void> {
     if (!(await mountPack(payload, loadingOperation))) {
       return;
     }
-    status.value = "已从菜单栏重新加载示例宠物包。";
+      status.value = "已从原生事件重新加载示例宠物包。";
   } catch (error) {
     const failure = normalizeError(error);
     if (!claimFailure(failure, loadingOperation)) {
@@ -363,7 +363,7 @@ async function bindNativeEvents(): Promise<void> {
   unlisteners.push(
     await listen<string>("diagnostics-exported", ({ payload }) => {
       diagnosticPath.value = payload;
-      status.value = "已从菜单栏导出诊断摘要。";
+      status.value = "诊断摘要已由原生事件导出。";
     }),
   );
   unlisteners.push(
@@ -555,7 +555,9 @@ onBeforeUnmount(() => {
                 shell.clickThrough ? "关闭点击穿透" : "开启点击穿透"
               }}</span>
               <small>{{
-                shell.clickThrough ? "也可从菜单栏恢复" : "会暂停系统文件拖放"
+                shell.clickThrough
+                  ? "关闭后从偏好设置入口恢复"
+                  : "会暂停系统文件拖放"
               }}</small>
             </button>
             <button type="button" @click="reloadPack">

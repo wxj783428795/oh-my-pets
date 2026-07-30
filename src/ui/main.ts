@@ -1,7 +1,7 @@
 import { createApp } from "vue";
 
-import App from "./App.vue";
 import { platformKey, tauriPlatform } from "./platform";
+import RootSurface from "./RootSurface.vue";
 import "./styles.css";
 
 const platform =
@@ -9,4 +9,4 @@ const platform =
     ? (await import("./browser-test-platform")).browserTestPlatform
     : tauriPlatform;
 
-createApp(App).provide(platformKey, platform).mount("#app");
+createApp(RootSurface).provide(platformKey, platform).mount("#app");

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -80,6 +81,31 @@ async function runAutomaticQa() {
   return report;
 }
 
+function appIsRunning(app) {
+  return app.exitCode === null && app.signalCode === null;
+}
+
+async function waitForCleanExit(app, timeoutMs = 5_000) {
+  if (!appIsRunning(app)) {
+    return app.exitCode === 0 && app.signalCode === null;
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const [code, signal] = await once(app, "exit", {
+      signal: controller.signal,
+    });
+    return code === 0 && signal === null;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return false;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function runManualQa(automaticReport) {
   const platformError = manualQaPlatformError(process.platform);
   if (platformError) {
@@ -101,7 +127,8 @@ async function runManualQa(automaticReport) {
     output: process.stdout,
   });
   const results = [];
-  let appStayedRunning = false;
+  let appStayedRunningUntilExitCheck = true;
+  let appExitedCleanly = false;
   try {
     await new Promise((resolveStart, rejectStart) => {
       let settled = false;
@@ -127,11 +154,28 @@ async function runManualQa(automaticReport) {
       }, 1_000);
     });
     console.log("\n应用已启动。请在真实 macOS 桌面逐项操作：");
-    for (const item of MANUAL_DESKTOP_CHECKS) {
+    const experienceItems = MANUAL_DESKTOP_CHECKS.slice(0, -1);
+    const exitItem = MANUAL_DESKTOP_CHECKS.at(-1);
+    for (const item of experienceItems) {
+      if (!appIsRunning(app)) {
+        appStayedRunningUntilExitCheck = false;
+        results.push({ item, passed: false });
+        continue;
+      }
       const answer = await readline.question(`${item}\n通过？[y/N] `);
       results.push({ item, passed: /^y(?:es)?$/i.test(answer.trim()) });
+      appStayedRunningUntilExitCheck &&= appIsRunning(app);
     }
-    appStayedRunning = app.exitCode === null && app.signalCode === null;
+    if (exitItem && appStayedRunningUntilExitCheck && appIsRunning(app)) {
+      const answer = await readline.question(`${exitItem}\n通过？[y/N] `);
+      const passed = /^y(?:es)?$/i.test(answer.trim());
+      results.push({ item: exitItem, passed });
+      if (passed) {
+        appExitedCleanly = await waitForCleanExit(app);
+      }
+    } else if (exitItem) {
+      results.push({ item: exitItem, passed: false });
+    }
   } finally {
     readline.close();
     if (app.exitCode === null) {
@@ -147,8 +191,13 @@ async function runManualQa(automaticReport) {
     diagnosticPath:
       automaticReport.checks.find(({ name }) => name === "diagnostics_export")
         ?.detail ?? null,
-    appStayedRunning,
-    passed: manualQaPassed(results, appStayedRunning),
+    appStayedRunningUntilExitCheck,
+    appExitedCleanly,
+    passed: manualQaPassed(
+      results,
+      appStayedRunningUntilExitCheck,
+      appExitedCleanly,
+    ),
     checks: results,
   };
   writeFileSync(manualReportPath, `${JSON.stringify(report, null, 2)}\n`);

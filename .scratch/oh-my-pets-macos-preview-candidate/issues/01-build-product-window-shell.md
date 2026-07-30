@@ -2,7 +2,7 @@
 
 Type: task
 Kind: feature
-Status: open
+Status: claimed
 Closeout-Contract: v1
 Blocked by: none
 
@@ -72,6 +72,21 @@ Blocked by: none
   交付路由，不改写 `main`；风险是流程资产曾表达错误 target。补救为从
   `main@6f06cc7` 建立受保护 integration、治理 PR 完整门禁、逐票 closeout 和
   最终全规格 review。
+- 2026-07-30 11:47 CST：领取本票。实施分支：
+  `codex/macos-preview-candidate-01-window-shell`；base：
+  `integration/macos-preview-candidate`；base commit：
+  `25db4e756335c653d1414882eb742cb0e87de6ee`；Pull Request target：
+  `integration/macos-preview-candidate`。
+- 2026-07-30：用户已批准本票与 accepted spec；TDD 使用已确认的公共 seams：
+  Tauri 窗口配置契约、Rust 窗口／菜单生命周期协调器、WebView 产品路由，以及
+  真实桌面 smoke 报告。测试只观察启动可见性、窗口角色、菜单结果和恢复行为，
+  不断言私有调用顺序。
+- 2026-07-30：首次双轴 review 共发现 4 个阻塞项：开发预览占用设置路由后无法
+  恢复、旧工作台错误宣称菜单栏提供点击穿透恢复、人工退出清单与“应用必须存活”
+  的 harness 契约冲突、物理点击穿透人工项缺失。现已分别通过固定 allowlist
+  路由恢复、文案校正、退出前存活／最终干净退出双状态和恢复人工项修复；Rust
+  回归与真实 desktop smoke 覆盖 developer → preferences 闭环，复审两轴均为
+  0 个阻塞项。
 
 ## Closeout Evidence
 
@@ -79,22 +94,28 @@ Blocked by: none
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: 2026-07-30 12:21 CST 通过；Rust workspace、126 个 Web 测试、2 个
+  Chromium E2E、scope／architecture、lint、WebView 构建、release Tauri 构建
+  与 closeout 扫描均通过。
 
 ### Manual QA
 
 - Status: pending
 - Command: `pnpm qa:desktop`
-- Result: pending
-- Reason:
+- Result: `pnpm qa:desktop:auto` 于 2026-07-30 12:19 CST 通过 8 项真实 Tauri
+  自动 smoke，包含启动拓扑、非聚焦窗口属性、菜单隐藏／恢复、
+  developer → preferences 路由恢复、设置关闭重建与宠物持续存活。
+- Reason: 尚需用户在真实 macOS 交互桌面确认视觉合成、Space／普通全屏、
+  真实菜单栏点击、物理点击穿透及最终菜单退出；自动 smoke 不替代这些判断。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: 2026-07-30 双轴复审均为 `Blocking findings: 0`；首次 4 个阻塞项已
+  修复并由契约测试、Rust 生命周期测试和真实 desktop smoke 验证。
 
 ### Commit
 
@@ -103,4 +124,6 @@ Blocked by: none
 
 ## Answer
 
-待实施。
+产品窗口壳、最小菜单、偏好设置与受控开发预览已实施并通过自动化、真实桌面
+smoke 与双轴 review。由于真实用户人工 QA 尚未执行，本票保持 `claimed`，不得
+标记为 `resolved`。

@@ -70,9 +70,14 @@ export function manualQaPlatformError(platform) {
     : `真实桌面人工 QA 仅支持 macOS（darwin），当前平台为 ${platform}`;
 }
 
-export function manualQaPassed(results, appStayedRunning) {
+export function manualQaPassed(
+  results,
+  appStayedRunningUntilExitCheck,
+  appExitedCleanly,
+) {
   return (
-    appStayedRunning === true &&
+    appStayedRunningUntilExitCheck === true &&
+    appExitedCleanly === true &&
     results.length > 0 &&
     results.every(({ passed }) => passed === true)
   );
