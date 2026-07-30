@@ -259,21 +259,27 @@ Windows 验证的边界。
 
 ## Delivery Strategy
 
-- 本专题采用 `docs/agents/branch-management.md` 的独立小票模式，不创建
-  `integration/*`。虽然规格包含八张票，但每张票都是带独立自动验证和真实
-  桌面 QA 的 tracer bullet，合入后仍保持 `main` 可验证、可集成。
-- 本规格、地图、票据与领域词汇变更先通过
-  `codex/docs-macos-preview-candidate -> main` 的正式文档 Pull Request
-  进入主线；该 PR 合并前不得领取实施票。
-- 规划 PR 合并后，`Issue 01` 与 `Issue 06` 分别从当时最新 `main` 创建独立
-  ticket 分支和 Pull Request；其他票必须等待前置票通过 PR 进入 `main`。
-- 一张 ticket 只对应一个主要实施分支和一个指向 `main` 的主要 Pull Request。
-  禁止从兄弟 ticket 分支派生或互相合并来绕过 blocking edges。
-- 所有 Pull Request 使用 merge commit，并在最新 `main` 上通过
-  `macOS ARM64 最终验证`；实现 SHA 写入 closeout 后不得 rebase 或强推。
-- 如果后续事实证明任一中间状态不适合进入 `main`，必须先用独立流程变更重新
-  评估临时 integration，并同步更新本规格、地图、远端 ruleset 和未领取票；
-  不得临时把某张 ticket 的 PR target 改到未记录分支。
+- 本专题采用 `docs/agents/branch-management.md` 的临时 integration 模式，
+  唯一目标分支为 `integration/macos-preview-candidate`。八张票共同构成一个
+  候选版，窗口壳、状态、运动、互动、行为、正式内容、引导与封板之间存在不适合
+  单独进入 `main` 的中间态。
+- integration 以 `origin/main@6f06cc7` 为事实基线创建，并使用精确匹配的临时
+  ruleset；专题整体交付后通过一个最终 Pull Request 合入最新 `main`，随后先
+  停用 ruleset，再删除 integration。
+- `Issue 01` 与 `Issue 06` 从最新 integration 创建独立 ticket 分支；
+  其他票必须等待前置票通过 Pull Request 进入 integration。
+- 一张 ticket 只对应一个主要实施分支和一个指向 integration 的主要
+  Pull Request。禁止从兄弟 ticket 分支派生或互相合并来绕过 blocking edges。
+- 所有 Pull Request 使用 merge commit。ticket Pull Request 必须在最新
+  integration 上通过 `macOS ARM64 最终验证`；最终专题 Pull Request 必须在
+  最新 `main` 上通过同一 required check。实现 SHA 写入 closeout 后不得
+  rebase 或强推。
+- 规划资产曾在旧流程下通过 Pull Request #4 提前进入 `main`；随后 Pull
+  Request #5 才确立 planning／integration 生命周期。这里不伪造 planning
+  bootstrap、不重写 `main`，而是从包含这些历史资产的最新 `main` 创建
+  integration，再用独立治理 Pull Request 校正本规格、地图和 tickets。该迁移
+  例外由用户于 2026-07-30 明确批准，风险由完整 required check、逐票 closeout
+  和最终 integration-to-main review 补偿。
 
 ## Decision Notes
 
@@ -285,3 +291,7 @@ Windows 验证的边界。
   本规格，不依赖未进入正式范围的 research 资产。
 - 2026-07-30：规划基于远端 `main@e5c070c` 的正式分支规范修正为独立小票
   direct-to-main 模式；不创建临时 integration。
+- 2026-07-30：Pull Request #5 合入后，用户明确批准按最新分支策略把本专题
+  迁移到 `integration/macos-preview-candidate`。由于规划资产已经通过旧流程
+  Pull Request #4 进入 `main`，本次从 `main@6f06cc7` 建立 integration 并
+  如实记录历史偏差，不伪造 bootstrap 或改写历史。

@@ -63,8 +63,10 @@ Blocked by: 04, 05, 06, 07
   `pnpm qa:desktop` 与本票单票 closeout 全部通过。
 - Standards review 与 Spec review 均覆盖完整候选版规格且阻塞发现为零。
 - 使用中文提交形成可追溯实现记录；所有前置票保持各自真实 closeout 证据。
-- 创建主要实施分支对应、指向 `main` 的 Ready Pull Request，并在最新
-  `main` 上通过 `macOS ARM64 最终验证`；只允许 merge commit。
+- 创建主要实施分支对应、指向 `integration/macos-preview-candidate` 的 Ready
+  Pull Request，并在最新 integration 上通过 `macOS ARM64 最终验证`；只允许
+  merge commit。八票完成后再从 integration 创建最终专题 Pull Request 到
+  `main`。
 
 ## Implementation Notes
 
@@ -79,6 +81,15 @@ Blocked by: 04, 05, 06, 07
 
 - 2026-07-30：用户确认启动、延迟、CPU、内存、四小时常驻和真实 `.app` QA
   门槛。本阶段只对实际记录的 Apple Silicon macOS 环境作出候选版结论。
+- 2026-07-30：按用户批准的新策略迁移到
+  `integration/macos-preview-candidate`；本票等待 `Issue 04`、`05`、`06`、
+  `07` 的 Pull Request 全部合入 integration 并完成 closeout 后再领取，并在
+  完成后触发最终 integration-to-main 交付。
+- 2026-07-30：历史迁移例外：planning 资产已在新生命周期规则生效前通过 Pull
+  Request #4 进入 `main`，因此不伪造 planning bootstrap。例外仅校正本专题
+  交付路由，不改写 `main`；风险是流程资产曾表达错误 target。补救为从
+  `main@6f06cc7` 建立受保护 integration、治理 PR 完整门禁、逐票 closeout 和
+  最终全规格 review。
 
 ## Closeout Evidence
 
