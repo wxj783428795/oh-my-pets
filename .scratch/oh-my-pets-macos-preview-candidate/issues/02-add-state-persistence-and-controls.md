@@ -2,7 +2,7 @@
 
 Type: task
 Kind: feature
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: 01
 
@@ -126,6 +126,12 @@ Blocked by: 01
   的真实 `.app` 中确认 10 项人工清单全部通过。未知版本恢复诊断
   `oh-my-pets-diagnostics-1785413806.md` 经只读检查，说明可理解且不包含偏好
   文件或 worktree 路径；应用持续运行到退出项并干净结束。
+- 2026-07-30 20:32 CST：实现与最终本地证据 head `49c58cc` 已在最新
+  `integration/macos-preview-candidate@7970aed` 上通过远端
+  `macOS ARM64 最终验证`（GitHub Actions run `30542546848`，6 分 16 秒）和
+  GitGuardian；Ready Pull Request #10 的 merge state 为 `CLEAN`，无未解决
+  review 对话。本票满足关闭条件并标记 `resolved`，后续只允许 merge commit
+  合入 integration。
 
 ## Closeout Evidence
 
@@ -137,7 +143,8 @@ Blocked by: 01
 - Command: `pnpm verify`
 - Result: 2026-07-30 18:13 CST 在最终产品源码上通过；scope／architecture、
   49 个 Rust 测试、145 个 Web／工程测试、2 个 Chromium E2E、lint、WebView
-  构建、release Tauri 构建与 closeout 扫描均通过。
+  构建、release Tauri 构建与 closeout 扫描均通过。远端 head `49c58cc` 的
+  `macOS ARM64 最终验证` 于 20:32 CST 通过。
 
 ### Manual QA
 
@@ -179,5 +186,6 @@ Rust 统一产品状态、版本化原子偏好存储、真实 macOS 登录项�
 新手提示视觉流程由 Issue 07 接入，多显示器安全区和鼠标所在显示器召回由
 Issue 03 接入。本轮未通过重启整个 Mac 验证登录后自动启动，但自动 smoke 已读取
 macOS 登录项真实状态，人工 QA 已确认界面与系统设置一致。实现、最终 verify、
-人工 QA 和双轴复审已完成；ticket 保持 `claimed`，等待 Ready Pull Request 在
-最新 `integration/macos-preview-candidate` 上通过远端 required check。
+人工 QA、双轴复审、Ready Pull Request 与远端 required check 均已完成，本票
+已标记 `resolved`，等待按 merge commit 合入
+`integration/macos-preview-candidate`。
