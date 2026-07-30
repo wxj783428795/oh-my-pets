@@ -1,36 +1,39 @@
 #!/usr/bin/env node
 
-import { execFile, execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { setTimeout as delay } from "node:timers/promises";
-import { promisify } from "node:util";
 
 import {
   DESKTOP_QA_SOURCE_PATHS,
   desktopExecutablePath,
+  finishProbedProcess,
   MANUAL_DESKTOP_CHECKS,
   manualQaPassed,
   manualQaPlatformError,
-  startupFocusPreserved,
   validateDesktopSmokeReport,
   waitForCleanExit,
 } from "./lib/desktop-qa.mjs";
+import {
+  frontmostApplicationPid,
+  startMacosStartupFocusProbe,
+} from "./lib/startup-focus-probe.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const outputDir = resolve(repositoryRoot, "target", "desktop-smoke");
 const automaticReportPath = resolve(outputDir, "report.json");
 const manualReportPath = resolve(outputDir, "manual-qa.json");
+const qaPreferencesPath = resolve(outputDir, "preferences.json");
 const manualMode = process.argv.includes("--manual");
 const binaryPath = desktopExecutablePath({
   repositoryRoot,
   platform: process.platform,
   manualMode,
 });
-const execFileAsync = promisify(execFile);
 
 function desktopSourceFingerprint() {
   const listedPaths = execFileSync(
@@ -66,18 +69,6 @@ function desktopSourceFingerprint() {
   return hash.digest("hex");
 }
 
-async function frontmostApplicationPid() {
-  const { stdout } = await execFileAsync("osascript", [
-    "-e",
-    'tell application "System Events" to get unix id of first application process whose frontmost is true',
-  ]);
-  const pid = Number.parseInt(stdout.trim(), 10);
-  if (!Number.isInteger(pid)) {
-    throw new Error(`无法识别当前前台应用进程：${stdout.trim()}`);
-  }
-  return pid;
-}
-
 async function observeStartupFocus(beforePid, appPid) {
   const observedPids = [];
   for (const waitMs of [100, 100]) {
@@ -88,11 +79,8 @@ async function observeStartupFocus(beforePid, appPid) {
     beforePid,
     appPid,
     observedPids,
-    preserved: startupFocusPreserved({
-      beforePid,
-      appPid,
-      observedPids,
-    }),
+    preserved:
+      beforePid !== appPid && observedPids.every((pid) => pid === beforePid),
   };
 }
 
@@ -122,16 +110,20 @@ function waitForProcess(child) {
 }
 
 async function runProcess(environment) {
-  const beforePid = await frontmostApplicationPid();
-  const child = spawn(binaryPath, [], {
-    cwd: repositoryRoot,
-    env: { ...process.env, ...environment },
-    stdio: "inherit",
+  const { evidence, target: child } = await startMacosStartupFocusProbe({
+    repositoryRoot,
+    targetPath: binaryPath,
+    targetEnvironment: environment,
   });
+  if (!child) {
+    throw new Error("启动焦点探针没有创建桌面应用进程");
+  }
   const completion = waitForProcess(child);
-  const startupFocus = await observeStartupFocus(beforePid, child.pid);
-  await completion;
-  return startupFocus;
+  return finishProbedProcess({
+    evidence,
+    target: child,
+    completion,
+  });
 }
 
 async function runAutomaticQa() {
@@ -140,9 +132,11 @@ async function runAutomaticQa() {
   }
   await mkdir(outputDir, { recursive: true });
   rmSync(automaticReportPath, { force: true });
+  rmSync(qaPreferencesPath, { force: true });
   const sourceFingerprint = desktopSourceFingerprint();
   const startupFocus = await runProcess({
     OH_MY_PETS_DESKTOP_SMOKE_REPORT: automaticReportPath,
+    OH_MY_PETS_QA_PREFERENCES_PATH: qaPreferencesPath,
   });
   if (!existsSync(automaticReportPath)) {
     throw new Error("Tauri 应用未生成桌面 smoke 报告");
@@ -186,6 +180,99 @@ function appIsRunning(app) {
   return app.exitCode === null && app.signalCode === null;
 }
 
+async function startManualApp() {
+  const beforePid = await frontmostApplicationPid();
+  const app = spawn(binaryPath, [], {
+    cwd: repositoryRoot,
+    env: {
+      ...process.env,
+      OH_MY_PETS_QA_PREFERENCES_PATH: qaPreferencesPath,
+    },
+    detached: false,
+    stdio: "ignore",
+  });
+  const startupFocus = await observeStartupFocus(beforePid, app.pid);
+  if (!startupFocus.preserved) {
+    app.kill();
+    throw new Error(
+      `人工 QA 应用启动时抢走了前台焦点：应用 PID=${startupFocus.appPid}，观测=${startupFocus.observedPids.join(",")}`,
+    );
+  }
+  await new Promise((resolveStart, rejectStart) => {
+    let settled = false;
+    const rejectBeforeStart = (error) => {
+      if (!settled) {
+        settled = true;
+        rejectStart(error);
+      }
+    };
+    app.once("error", rejectBeforeStart);
+    app.once("exit", (code, signal) => {
+      rejectBeforeStart(
+        new Error(
+          `人工 QA 应用启动后提前退出：code=${String(code)}, signal=${String(signal)}`,
+        ),
+      );
+    });
+    setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolveStart();
+      }
+    }, 1_000);
+  });
+  return app;
+}
+
+async function stopForQaRestart(app) {
+  if (!appIsRunning(app)) {
+    throw new Error("人工 QA 应用在计划重启前已经退出");
+  }
+  app.kill();
+  await waitForCleanExit(app);
+  if (appIsRunning(app)) {
+    throw new Error("人工 QA 应用未能在计划重启前结束");
+  }
+}
+
+async function performManualExperienceItem(item, app, readline) {
+  if (item.includes("在重启后保留")) {
+    const ready = await readline.question(
+      "请先把尺寸、活动频率改成非默认值，通过菜单召回宠物并记住其位置，再开启安静、隐藏和鼠标穿透；登录项保持你希望的最终状态。完成后输入 r，脚本将重启隔离测试应用。[r/N] ",
+    );
+    if (ready.trim().toLowerCase() !== "r") {
+      return { app, passed: false };
+    }
+    await stopForQaRestart(app);
+    app = await startManualApp();
+  }
+
+  if (item.includes("损坏或未知版本偏好")) {
+    const validPreferences = existsSync(qaPreferencesPath)
+      ? readFileSync(qaPreferencesPath)
+      : null;
+    await stopForQaRestart(app);
+    writeFileSync(
+      qaPreferencesPath,
+      '{"version":99,"qaInjected":"unknown-version"}\n',
+    );
+    app = await startManualApp();
+    const answer = await readline.question(`${item}\n通过？[y/N] `);
+    const passed = /^y(?:es)?$/i.test(answer.trim());
+    await stopForQaRestart(app);
+    if (validPreferences) {
+      writeFileSync(qaPreferencesPath, validPreferences);
+    } else {
+      rmSync(qaPreferencesPath, { force: true });
+    }
+    app = await startManualApp();
+    return { app, passed };
+  }
+
+  const answer = await readline.question(`${item}\n通过？[y/N] `);
+  return { app, passed: /^y(?:es)?$/i.test(answer.trim()) };
+}
+
 async function runManualQa(automaticReport) {
   const platformError = manualQaPlatformError(process.platform);
   if (platformError) {
@@ -197,12 +284,6 @@ async function runManualQa(automaticReport) {
     );
   }
 
-  const beforePid = await frontmostApplicationPid();
-  const app = spawn(binaryPath, [], {
-    cwd: repositoryRoot,
-    detached: false,
-    stdio: "ignore",
-  });
   const readline = createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -210,36 +291,9 @@ async function runManualQa(automaticReport) {
   const results = [];
   let appStayedRunningUntilExitCheck = true;
   let appExitedCleanly = false;
+  let app;
   try {
-    const startupFocus = await observeStartupFocus(beforePid, app.pid);
-    if (!startupFocus.preserved) {
-      throw new Error(
-        `人工 QA 应用启动时抢走了前台焦点：应用 PID=${startupFocus.appPid}，观测=${startupFocus.observedPids.join(",")}`,
-      );
-    }
-    await new Promise((resolveStart, rejectStart) => {
-      let settled = false;
-      const rejectBeforeStart = (error) => {
-        if (!settled) {
-          settled = true;
-          rejectStart(error);
-        }
-      };
-      app.once("error", rejectBeforeStart);
-      app.once("exit", (code, signal) => {
-        rejectBeforeStart(
-          new Error(
-            `人工 QA 应用启动后提前退出：code=${String(code)}, signal=${String(signal)}`,
-          ),
-        );
-      });
-      setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          resolveStart();
-        }
-      }, 1_000);
-    });
+    app = await startManualApp();
     console.log("\n应用已启动。请在真实 macOS 桌面逐项操作：");
     const experienceItems = MANUAL_DESKTOP_CHECKS.slice(0, -1);
     const exitItem = MANUAL_DESKTOP_CHECKS.at(-1);
@@ -249,8 +303,10 @@ async function runManualQa(automaticReport) {
         results.push({ item, passed: false });
         continue;
       }
-      const answer = await readline.question(`${item}\n通过？[y/N] `);
-      results.push({ item, passed: /^y(?:es)?$/i.test(answer.trim()) });
+
+      const itemResult = await performManualExperienceItem(item, app, readline);
+      app = itemResult.app;
+      results.push({ item, passed: itemResult.passed });
       appStayedRunningUntilExitCheck &&= appIsRunning(app);
     }
     if (exitItem && appStayedRunningUntilExitCheck && appIsRunning(app)) {
@@ -265,7 +321,7 @@ async function runManualQa(automaticReport) {
     }
   } finally {
     readline.close();
-    if (app.exitCode === null) {
+    if (app && app.exitCode === null) {
       app.kill();
     }
   }

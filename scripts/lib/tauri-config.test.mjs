@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 
 const configUrl = new URL("../../src-tauri/tauri.conf.json", import.meta.url);
 const infoPlistUrl = new URL("../../src-tauri/Info.plist", import.meta.url);
+const desktopLibUrl = new URL("../../src-tauri/src/lib.rs", import.meta.url);
 const capabilityUrl = new URL(
   "../../src-tauri/capabilities/default.json",
   import.meta.url,
@@ -65,6 +66,25 @@ describe("macOS 产品窗口拓扑", () => {
         focusable: false,
       }),
     ]);
+  });
+
+  test("macOS 启动握手先阻止强制激活再恢复菜单栏应用策略", async () => {
+    const desktopLib = await readFile(desktopLibUrl, "utf8");
+
+    expect(desktopLib).toMatch(
+      /setup\(\|app\|[\s\S]*ActivationPolicy::Accessory[\s\S]*let mut app = builder[\s\S]*ActivationPolicy::Prohibited[\s\S]*app\.run/,
+    );
+    expect(desktopLib).toContain("ADR 0002");
+  });
+
+  test("Issue 02 不提前实现多显示器安全区算法且状态发布错误不会被吞掉", async () => {
+    const desktopLib = await readFile(desktopLibUrl, "utf8");
+
+    expect(desktopLib).not.toContain(".available_monitors()");
+    expect(desktopLib).not.toMatch(/let _ = refresh_tray_menu/);
+    expect(desktopLib).toMatch(
+      /fn publish_product_state[\s\S]*Result<\(\), CommandError>/,
+    );
   });
 
   test("权限覆盖按需创建的偏好窗口但不保留旧主窗口角色", async () => {

@@ -6,6 +6,7 @@ import {
   AUTOMATED_DESKTOP_CHECKS,
   DESKTOP_QA_SOURCE_PATHS,
   desktopExecutablePath,
+  finishProbedProcess,
   MANUAL_DESKTOP_CHECKS,
   manualQaPassed,
   manualQaPlatformError,
@@ -29,6 +30,8 @@ function validReport() {
       beforePid: 100,
       appPid: 200,
       observedPids: [100, 100],
+      typedCount: 100,
+      minimumTypedCount: 100,
       preserved: true,
     },
     sourceFingerprint: "a".repeat(64),
@@ -70,6 +73,8 @@ describe("桌面 smoke 报告", () => {
         beforePid: 100,
         appPid: 200,
         observedPids: [100, 200],
+        typedCount: 100,
+        minimumTypedCount: 100,
       }),
     ).toBe(false);
     expect(
@@ -77,6 +82,8 @@ describe("桌面 smoke 报告", () => {
         beforePid: 100,
         appPid: 200,
         observedPids: [100, 300],
+        typedCount: 100,
+        minimumTypedCount: 100,
       }),
     ).toBe(false);
     expect(
@@ -84,8 +91,52 @@ describe("桌面 smoke 报告", () => {
         beforePid: 100,
         appPid: 200,
         observedPids: [100, 100],
+        typedCount: 100,
+        minimumTypedCount: 100,
       }),
     ).toBe(true);
+  });
+
+  test("前台 PID 未变但连续输入中断时仍判定启动抢焦点", () => {
+    expect(
+      startupFocusPreserved({
+        beforePid: 100,
+        appPid: 200,
+        observedPids: [100, 100],
+        typedCount: 42,
+        minimumTypedCount: 100,
+      }),
+    ).toBe(false);
+  });
+
+  test("焦点证据失败时终止并收拢目标桌面进程", async () => {
+    const target = {
+      exitCode: null,
+      signalCode: null,
+      killCalled: false,
+      kill() {
+        this.killCalled = true;
+        this.exitCode = 0;
+      },
+    };
+
+    await expect(
+      finishProbedProcess({
+        evidence: Promise.reject(new Error("连续输入中断")),
+        target,
+        completion: Promise.resolve(),
+      }),
+    ).rejects.toThrow("连续输入中断");
+    expect(target.killCalled).toBe(true);
+  });
+
+  test("缺少连续输入证据时拒绝自动 smoke 报告", () => {
+    const report = validReport();
+    delete report.startupFocus.typedCount;
+
+    expect(validateDesktopSmokeReport(report)).toContain(
+      "报告必须包含未抢焦点的真实启动证据",
+    );
   });
 
   test("缺少真实启动焦点证据时拒绝自动 smoke 报告", () => {
@@ -150,7 +201,35 @@ describe("桌面 smoke 报告", () => {
 
   test("人工验收保留点击穿透的物理体验检查", () => {
     expect(MANUAL_DESKTOP_CHECKS).toContain(
-      "确认在高级开发预览开启点击穿透后，桌面目标可被物理点击，并能从同一入口关闭；收起后可经菜单栏重新打开偏好设置恢复",
+      "确认开启点击穿透后桌面目标可被物理点击，并能从菜单栏关闭穿透",
+    );
+  });
+
+  test("人工验收覆盖跨启动持久化矩阵和损坏恢复", () => {
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认通过菜单召回宠物并记住其位置；尺寸、活动频率、登录时启动和最后位置在重启后保留；安静、隐藏、穿透与运行时动作在重启后重置",
+    );
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认使用损坏或未知版本偏好启动时宠物仍可见、设置回到安全默认值，诊断可理解且不包含偏好文件路径",
+    );
+    expect(MANUAL_DESKTOP_CHECKS.join("\n")).toContain(
+      "通过菜单召回宠物并记住其位置",
+    );
+    expect(MANUAL_DESKTOP_CHECKS.join("\n")).not.toContain("移动宠物");
+  });
+
+  test("人工验收只要求观察当前 ticket 已接入的设置效果", () => {
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认尺寸会立即同步到宠物，活动频率在重新打开偏好设置后保持选择；登录时启动与 macOS 系统设置中的登录项一致",
+    );
+    expect(MANUAL_DESKTOP_CHECKS.join("\n")).not.toContain(
+      "活动频率和登录时启动会立即同步到宠物与菜单",
+    );
+  });
+
+  test("人工验收不会把新手提示状态 seam 误称为已完成界面", () => {
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认可重复打开偏好设置，重新加载卷卷、重置新手提示状态和导出诊断均可用；界面明确说明实际提示流程后续接入，关闭设置后宠物与菜单栏继续运行",
     );
   });
 

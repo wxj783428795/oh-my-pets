@@ -47,6 +47,17 @@ body {
 .pet-canvas {
   display: grid;
   place-items: center;
+  transform: scale(0.86);
+  transform-origin: center bottom;
+  transition: transform 160ms ease-out;
+}
+
+.pet-surface[data-pet-size="small"] .pet-canvas {
+  transform: scale(0.7);
+}
+
+.pet-surface[data-pet-size="large"] .pet-canvas {
+  transform: scale(1);
 }
 
 .pet-canvas canvas {
@@ -93,7 +104,7 @@ body {
 }
 
 .preferences-titlebar h1,
-.preferences-placeholder h2,
+.preference-card h2,
 .developer-entry h2 {
   font-family: "Iowan Old Style", "Songti SC", serif;
   font-weight: 600;
@@ -105,13 +116,15 @@ body {
 }
 
 .preferences-titlebar > span,
-.preferences-placeholder p,
+.preference-card p,
 .developer-entry p {
   color: var(--muted);
-  font: 13px/1.65 "Avenir Next", "PingFang SC", sans-serif;
+  font:
+    13px/1.65 "Avenir Next",
+    "PingFang SC",
+    sans-serif;
 }
 
-.preferences-placeholder,
 .developer-entry {
   margin-top: 20px;
   padding: 24px;
@@ -120,15 +133,152 @@ body {
   border-radius: 16px;
 }
 
-.preferences-placeholder h2,
+.preference-card h2,
 .developer-entry h2 {
   margin: 7px 0 8px;
 }
 
-.preferences-placeholder p,
+.preference-card p,
 .developer-entry p {
   max-width: 580px;
   margin-bottom: 0;
+}
+
+.preferences-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.preference-card {
+  min-width: 0;
+  padding: 20px;
+  background: rgba(255, 251, 239, 0.75);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.preference-card.wide {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.preference-card h2 {
+  margin: 7px 0 12px;
+  font-size: 20px;
+}
+
+.preference-card p {
+  max-width: 390px;
+  margin: 4px 0 0;
+}
+
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.segmented-control label {
+  cursor: pointer;
+}
+
+.segmented-control input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented-control span {
+  display: grid;
+  min-height: 36px;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(52, 41, 31, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.segmented-control input:checked + span {
+  color: #fff8e8;
+  background: var(--teal);
+  border-color: var(--teal);
+}
+
+.segmented-control input:focus-visible + span {
+  outline: 3px solid rgba(29, 121, 115, 0.35);
+  outline-offset: 2px;
+}
+
+.switch-control {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.switch-control input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--teal);
+}
+
+.preference-actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+  max-width: 350px;
+}
+
+.preference-actions button {
+  min-height: 34px;
+  padding: 0 11px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(52, 41, 31, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.preference-actions button:hover:not(:disabled) {
+  background: rgba(52, 41, 31, 0.09);
+}
+
+.preference-actions button:disabled {
+  opacity: 0.48;
+}
+
+.preferences-loading,
+.preferences-feedback,
+.preferences-failure {
+  margin: 16px 0 0;
+  padding: 10px 13px;
+  font:
+    12px/1.5 "Avenir Next",
+    "PingFang SC",
+    sans-serif;
+  border-radius: 9px;
+}
+
+.preferences-loading,
+.preferences-feedback {
+  color: #155f59;
+  background: rgba(29, 121, 115, 0.1);
+}
+
+.preferences-failure {
+  color: var(--orange-dark);
+  background: rgba(220, 111, 56, 0.1);
 }
 
 .developer-link {
@@ -203,7 +353,9 @@ button:focus-visible {
   height: 27px;
   place-items: center;
   color: #fff6df;
-  font: 700 14px/1 "Songti SC", serif;
+  font:
+    700 14px/1 "Songti SC",
+    serif;
   background: var(--orange-dark);
   border-radius: 50% 46% 52% 42%;
   transform: rotate(-7deg);
@@ -258,7 +410,11 @@ button:focus-visible {
 .drag-grip {
   width: 10px;
   height: 10px;
-  background-image: radial-gradient(circle, currentColor 1px, transparent 1.2px);
+  background-image: radial-gradient(
+    circle,
+    currentColor 1px,
+    transparent 1.2px
+  );
   background-position: center;
   background-size: 4px 4px;
 }
@@ -291,7 +447,10 @@ button:focus-visible {
 
 .hero h1 {
   margin: 4px 0 0;
-  font: 600 30px/0.96 "Iowan Old Style", "Songti SC", serif;
+  font:
+    600 30px/0.96 "Iowan Old Style",
+    "Songti SC",
+    serif;
   letter-spacing: -0.035em;
 }
 
@@ -299,7 +458,10 @@ button:focus-visible {
   width: 310px;
   margin: 0;
   color: var(--muted);
-  font: 12px/1.55 "Avenir Next", "PingFang SC", sans-serif;
+  font:
+    12px/1.55 "Avenir Next",
+    "PingFang SC",
+    sans-serif;
 }
 
 .workspace-grid {
@@ -326,7 +488,10 @@ button:focus-visible {
 
 .card-heading h2 {
   margin: 2px 0 0;
-  font: 600 21px/1.1 "Iowan Old Style", "Songti SC", serif;
+  font:
+    600 21px/1.1 "Iowan Old Style",
+    "Songti SC",
+    serif;
 }
 
 .card-heading.compact h2 {
@@ -358,7 +523,11 @@ button:focus-visible {
   place-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.92) 0 29%, transparent 60%),
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(255, 255, 255, 0.92) 0 29%,
+      transparent 60%
+    ),
     linear-gradient(180deg, #eddcb6 0 74%, #d8c08f 74% 75%, #ead9b4 75%);
   border: 1px solid rgba(93, 64, 35, 0.16);
   border-radius: 12px;
@@ -368,7 +537,10 @@ button:focus-visible {
 .pet-stage::before {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(82, 56, 31, 0.13) 0.7px, transparent 0.7px);
+  background-image: radial-gradient(
+    rgba(82, 56, 31, 0.13) 0.7px,
+    transparent 0.7px
+  );
   background-size: 9px 9px;
   content: "";
   opacity: 0.35;
@@ -398,7 +570,12 @@ button:focus-visible {
   bottom: 72px;
   left: 24px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(105, 70, 36, 0.25), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(105, 70, 36, 0.25),
+    transparent
+  );
 }
 
 .stage-message,

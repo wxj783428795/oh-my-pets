@@ -80,6 +80,31 @@ export type ShellSnapshot = {
   visibleOnAllWorkspaces: boolean;
 };
 
+export type PetSize = "small" | "medium" | "large";
+export type ActivityFrequency = "low" | "standard" | "high";
+
+export type ProductStateSnapshot = {
+  preferences: {
+    petSize: PetSize;
+    activityFrequency: ActivityFrequency;
+    launchAtLogin: boolean;
+    lastValidPosition: { x: number; y: number } | null;
+    onboardingSeen: boolean;
+  };
+  session: {
+    quietMode: boolean;
+    petHidden: boolean;
+    clickThrough: boolean;
+    currentAction: string;
+    velocity: { x: number; y: number };
+    behaviorTimerMs: number | null;
+  };
+  preferenceHealth: {
+    kind: "healthy" | "missing" | "migrated" | "recovered";
+    message: string;
+  };
+};
+
 export type BehaviorStep = {
   action: string;
   reason: string;

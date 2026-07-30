@@ -2,7 +2,10 @@ mod behavior;
 mod desktop_runtime;
 mod desktop_smoke;
 pub mod diagnostics;
+mod login_item;
 pub mod pet_pack_store;
+mod preferences_store;
+mod product_state;
 pub mod window_recovery;
 mod window_shell;
 
@@ -17,10 +20,16 @@ use behavior::{BehaviorStep, PreviewBehavior};
 use desktop_runtime::schedule_desktop_smoke;
 use desktop_smoke::requested_report_path;
 use diagnostics::{DiagnosticsPetPack, DiagnosticsSnapshot, write_diagnostics};
+use login_item::{LoginItem as _, SystemLoginItem, change_launch_at_login};
 use oh_my_pets_domain::{
     AtlasManifest, LoadedPetPack, PetManifest, PetPackSummary, ValidationIssue, load_pet_pack,
 };
 use pet_pack_store::PetPackStore;
+use preferences_store::FilePreferencesRepository;
+use product_state::{
+    ActivityFrequency, PetSize, ProductStateController, ProductStateSnapshot, SavedPosition,
+    Velocity,
+};
 use serde::{Deserialize, Serialize};
 use tauri::{
     AppHandle, Emitter, Listener, Manager, PhysicalPosition, State, WebviewWindow, WindowEvent,
@@ -37,6 +46,11 @@ const TRAY_TITLE: &str = "卷";
 const TRAY_TOOLTIP: &str = "Oh My Pets macOS 预览版";
 const MENU_SHOW_PET: &str = "show-pet";
 const MENU_HIDE_PET: &str = "hide-pet";
+const MENU_ENABLE_QUIET: &str = "enable-quiet";
+const MENU_DISABLE_QUIET: &str = "disable-quiet";
+const MENU_ENABLE_CLICK_THROUGH: &str = "enable-click-through";
+const MENU_DISABLE_CLICK_THROUGH: &str = "disable-click-through";
+const MENU_RECALL_PET: &str = "recall-pet";
 const MENU_OPEN_PREFERENCES: &str = "open-preferences";
 const MENU_QUIT: &str = "quit";
 
@@ -123,16 +137,16 @@ impl CommandError {
 }
 
 struct AppState {
-    shell: Mutex<ShellSnapshot>,
+    product: ProductStateController,
     pet_pack: PetPackStore,
     behavior: Mutex<PreviewBehavior>,
     frontend_smoke: Mutex<Option<FrontendSmokeStatus>>,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
+impl AppState {
+    fn new(product: ProductStateController) -> Self {
         Self {
-            shell: Mutex::new(ShellSnapshot::default()),
+            product,
             pet_pack: PetPackStore::default(),
             behavior: Mutex::new(PreviewBehavior::default()),
             frontend_smoke: Mutex::new(None),
@@ -161,12 +175,36 @@ fn example_pack_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../assets/pets/juanjuan")
 }
 
+fn preferences_file_path(app: &AppHandle) -> Result<PathBuf, CommandError> {
+    if let Some(path) = std::env::var_os("OH_MY_PETS_QA_PREFERENCES_PATH") {
+        return Ok(PathBuf::from(path));
+    }
+    app.path()
+        .app_config_dir()
+        .map(|directory| directory.join("preferences.json"))
+        .map_err(|error| CommandError::shell(error.to_string()))
+}
+
 fn snapshot(state: &AppState) -> Result<ShellSnapshot, CommandError> {
     state
-        .shell
-        .lock()
-        .map(|value| value.clone())
-        .map_err(|_| CommandError::shell("窗口状态锁已损坏"))
+        .product
+        .snapshot()
+        .map(|value| ShellSnapshot {
+            click_through: value.session.click_through,
+            ..ShellSnapshot::default()
+        })
+        .map_err(CommandError::shell)
+}
+
+fn publish_product_state(
+    app: &AppHandle,
+    value: &ProductStateSnapshot,
+) -> Result<(), CommandError> {
+    // 先更新始终可用的恢复入口，再通知 WebView；尤其不能让鼠标穿透已经生效、
+    // 但菜单仍停留在“开启鼠标穿透”。
+    refresh_tray_menu(app, value).map_err(|error| CommandError::shell(error.to_string()))?;
+    app.emit("product-state", value)
+        .map_err(|error| CommandError::shell(error.to_string()))
 }
 
 fn set_click_through_inner(
@@ -175,22 +213,61 @@ fn set_click_through_inner(
     enabled: bool,
 ) -> Result<ShellSnapshot, CommandError> {
     let window = pet_window(app)?;
+    let previous = state
+        .product
+        .snapshot()
+        .map_err(CommandError::shell)?
+        .session
+        .click_through;
     window
         .set_ignore_cursor_events(enabled)
         .map_err(|error| CommandError::shell(error.to_string()))?;
-    let value = {
-        let mut shell = state
-            .shell
-            .lock()
-            .map_err(|_| CommandError::shell("窗口状态锁已损坏"))?;
-        shell.click_through = enabled;
-        shell.clone()
+    let product = match state.product.set_click_through(enabled) {
+        Ok(product) => product,
+        Err(error) => {
+            let rollback = window.set_ignore_cursor_events(previous);
+            return Err(CommandError::shell(match rollback {
+                Ok(()) => error,
+                Err(rollback_error) => {
+                    format!("{error}；恢复原窗口鼠标穿透状态失败：{rollback_error}")
+                }
+            }));
+        }
     };
-    let _ = app.emit("shell-state", &value);
+    if let Err(publish_error) = publish_product_state(app, &product) {
+        let window_rollback = window.set_ignore_cursor_events(previous);
+        let state_rollback = state.product.set_click_through(previous);
+        if let Ok(previous_state) = &state_rollback {
+            let _ = publish_product_state(app, previous_state);
+        }
+        let rollback_details = match (window_rollback, state_rollback) {
+            (Ok(()), Ok(_)) => "已恢复原鼠标穿透状态".to_string(),
+            (window_result, state_result) => format!(
+                "恢复原状态失败：窗口={}；状态={}",
+                window_result
+                    .err()
+                    .map_or_else(|| "成功".to_string(), |error| error.to_string()),
+                state_result.err().unwrap_or_else(|| "成功".to_string())
+            ),
+        };
+        return Err(CommandError::shell(format!(
+            "{}；{rollback_details}",
+            publish_error.message
+        )));
+    }
+    let value = ShellSnapshot {
+        click_through: product.session.click_through,
+        ..ShellSnapshot::default()
+    };
+    app.emit("shell-state", &value)
+        .map_err(|error| CommandError::shell(error.to_string()))?;
     Ok(value)
 }
 
-fn reset_window_position_inner(app: &AppHandle) -> Result<(), CommandError> {
+fn reset_window_position_inner(
+    app: &AppHandle,
+    state: &AppState,
+) -> Result<ProductStateSnapshot, CommandError> {
     let window = pet_window(app)?;
     let current_monitor = window
         .current_monitor()
@@ -227,7 +304,36 @@ fn reset_window_position_inner(app: &AppHandle) -> Result<(), CommandError> {
     window
         .set_position(PhysicalPosition::new(position.x, position.y))
         .map_err(|error| CommandError::shell(error.to_string()))?;
-    dispatch_window_menu(app, MenuAction::ShowPet)
+    dispatch_window_menu(app, MenuAction::ShowPet)?;
+    state
+        .product
+        .set_last_valid_position(SavedPosition {
+            x: position.x,
+            y: position.y,
+        })
+        .and_then(|_| state.product.set_pet_hidden(false))
+        .map_err(CommandError::shell)
+}
+
+fn restore_window_position(app: &AppHandle, state: &AppState) -> Result<(), CommandError> {
+    let window = pet_window(app)?;
+    let saved = state
+        .product
+        .snapshot()
+        .map_err(CommandError::shell)?
+        .preferences
+        .last_valid_position;
+
+    if let Some(saved) = saved {
+        window
+            .set_position(PhysicalPosition::new(saved.x, saved.y))
+            .map_err(|error| CommandError::shell(error.to_string()))?;
+        return Ok(());
+    }
+
+    let value = reset_window_position_inner(app, state)?;
+    publish_product_state(app, &value)?;
+    Ok(())
 }
 
 fn reload_example_pet_pack_inner(
@@ -289,11 +395,20 @@ fn next_preview_action_inner(state: &AppState) -> Result<BehaviorStep, CommandEr
         .behavior_actions()
         .map_err(|error| CommandError::shell(error.to_string()))?
         .ok_or_else(|| CommandError::shell("宠物包尚未加载"))?;
-    state
+    let step = state
         .behavior
         .lock()
         .map_err(|_| CommandError::shell("行为状态锁已损坏"))
-        .map(|mut behavior| behavior.next(&actions))
+        .map(|mut behavior| behavior.next(&actions))?;
+    state
+        .product
+        .set_runtime_behavior(
+            &step.action,
+            Velocity { x: 0.0, y: 0.0 },
+            Some(u64::from(step.hold_ms)),
+        )
+        .map_err(CommandError::shell)?;
+    Ok(step)
 }
 
 fn trigger_preview_action_inner(
@@ -305,15 +420,25 @@ fn trigger_preview_action_inner(
         .behavior_actions()
         .map_err(|error| CommandError::shell(error.to_string()))?
         .ok_or_else(|| CommandError::shell("宠物包尚未加载"))?;
-    state
+    let step = state
         .behavior
         .lock()
         .map_err(|_| CommandError::shell("行为状态锁已损坏"))
-        .map(|behavior| behavior.trigger(action, &actions))
+        .map(|behavior| behavior.trigger(action, &actions))?;
+    state
+        .product
+        .set_runtime_behavior(
+            &step.action,
+            Velocity { x: 0.0, y: 0.0 },
+            Some(u64::from(step.hold_ms)),
+        )
+        .map_err(CommandError::shell)?;
+    Ok(step)
 }
 
 fn export_diagnostics_inner(app: &AppHandle, state: &AppState) -> Result<PathBuf, CommandError> {
     let shell = snapshot(state)?;
+    let product = state.product.snapshot().map_err(CommandError::shell)?;
     let pet_pack = state
         .pet_pack
         .snapshot()
@@ -334,6 +459,22 @@ fn export_diagnostics_inner(app: &AppHandle, state: &AppState) -> Result<PathBuf
         click_through: shell.click_through,
         always_on_top: shell.always_on_top,
         visible_on_all_workspaces: shell.visible_on_all_workspaces,
+        pet_size: match product.preferences.pet_size {
+            PetSize::Small => "small",
+            PetSize::Medium => "medium",
+            PetSize::Large => "large",
+        }
+        .to_string(),
+        activity_frequency: match product.preferences.activity_frequency {
+            ActivityFrequency::Low => "low",
+            ActivityFrequency::Standard => "standard",
+            ActivityFrequency::High => "high",
+        }
+        .to_string(),
+        launch_at_login: product.preferences.launch_at_login,
+        quiet_mode: product.session.quiet_mode,
+        pet_hidden: product.session.pet_hidden,
+        preference_health: product.preference_health.message,
         pet_pack: pet_pack.pack.as_ref().map(|pack| DiagnosticsPetPack {
             display_name: pack.summary.display_name.clone(),
             version: pack.summary.version.clone(),
@@ -352,6 +493,67 @@ fn shell_snapshot(state: State<'_, AppState>) -> Result<ShellSnapshot, CommandEr
 }
 
 #[tauri::command]
+fn product_state_snapshot(
+    state: State<'_, AppState>,
+) -> Result<ProductStateSnapshot, CommandError> {
+    state.product.snapshot().map_err(CommandError::shell)
+}
+
+#[tauri::command]
+fn set_pet_size(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    pet_size: PetSize,
+) -> Result<ProductStateSnapshot, CommandError> {
+    let value = state
+        .product
+        .set_pet_size(pet_size)
+        .map_err(CommandError::shell)?;
+    publish_product_state(&app, &value)?;
+    Ok(value)
+}
+
+#[tauri::command]
+fn set_activity_frequency(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    activity_frequency: ActivityFrequency,
+) -> Result<ProductStateSnapshot, CommandError> {
+    let value = state
+        .product
+        .set_activity_frequency(activity_frequency)
+        .map_err(CommandError::shell)?;
+    publish_product_state(&app, &value)?;
+    Ok(value)
+}
+
+#[tauri::command]
+fn set_launch_at_login(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    enabled: bool,
+) -> Result<ProductStateSnapshot, CommandError> {
+    let value = change_launch_at_login(&state.product, &SystemLoginItem::new(&app), enabled)
+        .map_err(CommandError::shell)?;
+    publish_product_state(&app, &value)?;
+    Ok(value)
+}
+
+#[tauri::command]
+fn set_quiet_mode(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    enabled: bool,
+) -> Result<ProductStateSnapshot, CommandError> {
+    let value = state
+        .product
+        .set_quiet_mode(enabled)
+        .map_err(CommandError::shell)?;
+    publish_product_state(&app, &value)?;
+    Ok(value)
+}
+
+#[tauri::command]
 fn set_click_through(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -361,15 +563,39 @@ fn set_click_through(
 }
 
 #[tauri::command]
-fn reset_window_position(app: AppHandle) -> Result<(), CommandError> {
-    reset_window_position_inner(&app)
+fn reset_window_position(app: AppHandle, state: State<'_, AppState>) -> Result<(), CommandError> {
+    let value = reset_window_position_inner(&app, state.inner())?;
+    publish_product_state(&app, &value)?;
+    Ok(())
 }
 
 #[tauri::command]
-fn hide_preview_window(window: WebviewWindow) -> Result<(), CommandError> {
-    window
+fn hide_preview_window(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<ProductStateSnapshot, CommandError> {
+    pet_window(&app)?
         .hide()
-        .map_err(|error| CommandError::shell(error.to_string()))
+        .map_err(|error| CommandError::shell(error.to_string()))?;
+    let value = state
+        .product
+        .set_pet_hidden(true)
+        .map_err(CommandError::shell)?;
+    publish_product_state(&app, &value)?;
+    Ok(value)
+}
+
+#[tauri::command]
+fn replay_onboarding(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<ProductStateSnapshot, CommandError> {
+    let value = state
+        .product
+        .set_onboarding_seen(false)
+        .map_err(CommandError::shell)?;
+    publish_product_state(&app, &value)?;
+    Ok(value)
 }
 
 #[tauri::command]
@@ -404,17 +630,63 @@ fn export_diagnostics(app: AppHandle, state: State<'_, AppState>) -> Result<Stri
 }
 
 fn handle_tray_menu(app: &AppHandle, id: &str) -> Result<(), CommandError> {
-    let action = match id {
-        MENU_SHOW_PET => Some(MenuAction::ShowPet),
-        MENU_HIDE_PET => Some(MenuAction::HidePet),
-        MENU_OPEN_PREFERENCES => Some(MenuAction::OpenPreferences),
-        MENU_QUIT => Some(MenuAction::Quit),
+    let state = app.state::<AppState>();
+    let value = match id {
+        MENU_SHOW_PET => {
+            dispatch_window_menu(app, MenuAction::ShowPet)?;
+            Some(
+                state
+                    .product
+                    .set_pet_hidden(false)
+                    .map_err(CommandError::shell)?,
+            )
+        }
+        MENU_HIDE_PET => {
+            dispatch_window_menu(app, MenuAction::HidePet)?;
+            Some(
+                state
+                    .product
+                    .set_pet_hidden(true)
+                    .map_err(CommandError::shell)?,
+            )
+        }
+        MENU_ENABLE_QUIET => Some(reset_window_position_inner(app, state.inner()).and_then(
+            |_| {
+                state
+                    .product
+                    .set_quiet_mode(true)
+                    .map_err(CommandError::shell)
+            },
+        )?),
+        MENU_DISABLE_QUIET => Some(
+            state
+                .product
+                .set_quiet_mode(false)
+                .map_err(CommandError::shell)?,
+        ),
+        MENU_ENABLE_CLICK_THROUGH => {
+            set_click_through_inner(app, state.inner(), true)?;
+            None
+        }
+        MENU_DISABLE_CLICK_THROUGH => {
+            set_click_through_inner(app, state.inner(), false)?;
+            None
+        }
+        MENU_RECALL_PET => Some(reset_window_position_inner(app, state.inner())?),
+        MENU_OPEN_PREFERENCES => {
+            dispatch_window_menu(app, MenuAction::OpenPreferences)?;
+            None
+        }
+        MENU_QUIT => {
+            dispatch_window_menu(app, MenuAction::Quit)?;
+            None
+        }
         _ => None,
     };
-    match action {
-        Some(action) => dispatch_window_menu(app, action),
-        None => Ok(()),
+    if let Some(value) = value {
+        publish_product_state(app, &value)?;
     }
+    Ok(())
 }
 
 fn mark_tray_ready(app: &AppHandle) {
@@ -432,9 +704,29 @@ fn report_tray_failure(app: &AppHandle, error: CommandError) {
     let _ = app.emit("shell-operation-failed", error);
 }
 
-fn build_tray(app: &AppHandle) -> tauri::Result<()> {
-    let show_pet = MenuItem::with_id(app, MENU_SHOW_PET, "显示宠物", true, None::<&str>)?;
-    let hide_pet = MenuItem::with_id(app, MENU_HIDE_PET, "隐藏宠物", true, None::<&str>)?;
+fn product_tray_menu(
+    app: &AppHandle,
+    state: &ProductStateSnapshot,
+) -> tauri::Result<Menu<tauri::Wry>> {
+    let (visibility_id, visibility_label) = if state.session.pet_hidden {
+        (MENU_SHOW_PET, "显示宠物")
+    } else {
+        (MENU_HIDE_PET, "隐藏宠物")
+    };
+    let (quiet_id, quiet_label) = if state.session.quiet_mode {
+        (MENU_DISABLE_QUIET, "退出安静模式")
+    } else {
+        (MENU_ENABLE_QUIET, "开启安静模式")
+    };
+    let (click_id, click_label) = if state.session.click_through {
+        (MENU_DISABLE_CLICK_THROUGH, "关闭鼠标穿透")
+    } else {
+        (MENU_ENABLE_CLICK_THROUGH, "开启鼠标穿透")
+    };
+    let visibility = MenuItem::with_id(app, visibility_id, visibility_label, true, None::<&str>)?;
+    let quiet = MenuItem::with_id(app, quiet_id, quiet_label, true, None::<&str>)?;
+    let click = MenuItem::with_id(app, click_id, click_label, true, None::<&str>)?;
+    let recall = MenuItem::with_id(app, MENU_RECALL_PET, "召回宠物", true, None::<&str>)?;
     let preferences = MenuItem::with_id(
         app,
         MENU_OPEN_PREFERENCES,
@@ -443,8 +735,27 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         None::<&str>,
     )?;
     let quit = MenuItem::with_id(app, MENU_QUIT, "退出 Oh My Pets", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show_pet, &hide_pet, &preferences, &quit])?;
+    Menu::with_items(
+        app,
+        &[&visibility, &quiet, &click, &recall, &preferences, &quit],
+    )
+}
 
+fn refresh_tray_menu(app: &AppHandle, state: &ProductStateSnapshot) -> tauri::Result<()> {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        tray.set_menu(Some(product_tray_menu(app, state)?))?;
+    }
+    Ok(())
+}
+
+fn build_tray(app: &AppHandle) -> Result<(), CommandError> {
+    let state = app
+        .state::<AppState>()
+        .product
+        .snapshot()
+        .map_err(CommandError::shell)?;
+    let menu =
+        product_tray_menu(app, &state).map_err(|error| CommandError::shell(error.to_string()))?;
     let tray = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu)
         .show_menu_on_left_click(false)
@@ -463,30 +774,66 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 ..
             } = event
             {
-                match dispatch_window_menu(tray.app_handle(), MenuAction::ShowPet) {
+                match handle_tray_menu(tray.app_handle(), MENU_SHOW_PET) {
                     Ok(()) => mark_tray_ready(tray.app_handle()),
                     Err(error) => report_tray_failure(tray.app_handle(), error),
                 }
             }
         });
-    let _tray = tray.build(app)?;
+    let _tray = tray
+        .build(app)
+        .map_err(|error| CommandError::shell(error.to_string()))?;
     Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default()
-        .manage(AppState::default())
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_plugin_autostart::init(
+        tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+        None,
+    ));
+    let builder = builder
         .on_window_event(|window, event| {
-            if window.label() == PET_WINDOW_LABEL
-                && let WindowEvent::CloseRequested { api, .. } = event
-            {
-                api.prevent_close();
-                let _ = window.hide();
+            if window.label() != PET_WINDOW_LABEL {
+                return;
+            }
+            match event {
+                WindowEvent::CloseRequested { api, .. } => {
+                    api.prevent_close();
+                    let _ = window.hide();
+                    let state = window.state::<AppState>();
+                    match state.product.set_pet_hidden(true).and_then(|value| {
+                        publish_product_state(window.app_handle(), &value)
+                            .map_err(|error| error.message)
+                    }) {
+                        Ok(()) => {}
+                        Err(error) => {
+                            report_tray_failure(window.app_handle(), CommandError::shell(error));
+                        }
+                    }
+                }
+                WindowEvent::Moved(position) => {
+                    let state = window.state::<AppState>();
+                    let _ = state.product.set_last_valid_position(SavedPosition {
+                        x: position.x,
+                        y: position.y,
+                    });
+                }
+                _ => {}
             }
         })
         .setup(|app| {
             let handle = app.handle().clone();
+            let launch_at_login = SystemLoginItem::new(&handle).is_enabled()?;
+            let preferences_path = preferences_file_path(&handle).map_err(|error| error.message)?;
+            let product = ProductStateController::load(
+                Box::new(FilePreferencesRepository::new(preferences_path)),
+                launch_at_login,
+            )?;
+            app.manage(AppState::new(product));
+
             let frontend_handle = handle.clone();
             app.listen("frontend-smoke-status", move |event| {
                 let Ok(status) = serde_json::from_str::<FrontendSmokeStatus>(event.payload())
@@ -501,20 +848,32 @@ pub fn run() {
             window.set_always_on_top(true)?;
             window.set_visible_on_all_workspaces(true)?;
             configure_pet_collection_behavior(&window)?;
-            build_tray(&handle)?;
+            restore_window_position(&handle, app.state::<AppState>().inner())
+                .map_err(|error| error.message)?;
+            build_tray(&handle).map_err(|error| error.message)?;
 
             let state = app.state::<AppState>();
             let _ = reload_example_pet_pack_inner(&handle, state.inner());
             if let Some(report_path) = requested_report_path() {
                 schedule_desktop_smoke(&handle, report_path);
             }
+            // ADR 0002：TAO 的启动激活请求已经结束，此时切回 Accessory 不会抢走
+            // 其他应用的 first responder，偏好设置仍可在用户发起后正常交互。
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             shell_snapshot,
+            product_state_snapshot,
+            set_pet_size,
+            set_activity_frequency,
+            set_launch_at_login,
+            set_quiet_mode,
             set_click_through,
             reset_window_position,
             hide_preview_window,
+            replay_onboarding,
             current_pet_pack,
             reload_example_pet_pack,
             next_preview_action,
@@ -524,7 +883,9 @@ pub fn run() {
     let mut app = builder
         .build(tauri::generate_context!())
         .expect("failed to build Oh My Pets");
+    // ADR 0002：阻止 TAO 在 applicationDidFinishLaunching 中的强制激活打断
+    // 当前前台应用的键盘 first responder；setup 完成后再恢复 Accessory。
     #[cfg(target_os = "macos")]
-    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+    app.set_activation_policy(tauri::ActivationPolicy::Prohibited);
     app.run(|_, _| {});
 }

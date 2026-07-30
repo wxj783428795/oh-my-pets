@@ -32,6 +32,7 @@
     "verify": "pnpm verify:core && pnpm build:desktop && pnpm closeout:check",
     "qa:desktop": "pnpm build:desktop:qa && node scripts/desktop-qa.mjs --manual",
     "qa:desktop:auto": "pnpm build:desktop && node scripts/desktop-qa.mjs --auto",
+    "qa:desktop:focus": "pnpm build:desktop:qa && node scripts/probe-startup-focus.mjs",
     "closeout:check": "node scripts/check-closeout.mjs",
     "scope:check": "node scripts/check-repository-scope.mjs",
     "scope:report": "node scripts/check-repository-scope.mjs --report",
