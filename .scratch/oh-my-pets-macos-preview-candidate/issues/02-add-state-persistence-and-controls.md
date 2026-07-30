@@ -112,7 +112,7 @@ Blocked by: 01
   只交付频率状态、持久化和共享事件。因此人工契约经失败测试保护后改为验证尺寸
   即时生效、活动频率在重开偏好设置后保持选择、登录项与系统设置一致，不再要求
   观察未接入的自主活动或菜单项。
-- 2026-07-30 20:10 CST：最终双轴 review 首轮发现 6 个阻塞项：偏好升级写回
+- 2026-07-30 18:10 CST：最终双轴 review 首轮发现 6 个阻塞项：偏好升级写回
   失败会中止启动、目录同步后的已提交状态会被错误回滚、登录项回滚错误被吞、
   菜单刷新错误被吞、焦点探针失败会残留进程，以及提前实现了 Issue 03 的多显示器
   安全区算法；另发现人工 QA 要求尚不可执行的“移动宠物”。逐项以失败测试复现后，
@@ -133,28 +133,51 @@ Blocked by: 01
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: 2026-07-30 18:13 CST 在最终产品源码上通过；scope／architecture、
+  49 个 Rust 测试、145 个 Web／工程测试、2 个 Chromium E2E、lint、WebView
+  构建、release Tauri 构建与 closeout 扫描均通过。
 
 ### Manual QA
 
-- Status: pending
+- Status: passed
 - Command: `pnpm qa:desktop`
-- Result: pending
+- Result: 最终 `pnpm qa:desktop:auto` 通过 11 项真实 Tauri smoke；启动焦点
+  连续输入探针收到 175 次按键，高于 100 次门槛，前台 PID 始终未变，系统登录
+  项真值为关闭。用户于 2026-07-30 20:23 CST 在同一最终源码指纹
+  `79d71141a13fb8742727cd95688a106e23d4d177c130561ece2531cbad74c51f`
+  的 `.app` 中确认 10 项人工清单全部通过；报告记录
+  `appStayedRunningUntilExitCheck=true`、`appExitedCleanly=true`、
+  `passed=true`。用户另导出的未知版本恢复诊断经只读检查，未包含偏好文件或
+  worktree 路径。
 - Reason:
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: 最终双轴复审均为 `Blocking findings: 0`。首轮 6 个阻塞项与 1 个
+  不可执行人工步骤已逐项以 TDD 修复；Standards 复审确认原子提交语义、登录项
+  回滚、菜单优先发布、鼠标穿透回滚、焦点失败进程清理与可执行人工 QA 均关闭；
+  Spec 复审确认写回失败不再阻断安全启动，且 Issue 03 的多显示器安全区算法已
+  从本票移除。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: `60c4680485958513f53c2042259c10c39860ec74`
 
 ## Answer
 
-待实施。
+Rust 统一产品状态、版本化原子偏好存储、真实 macOS 登录项、最终菜单集合与偏好
+设置骨架已经实施；持久字段和会话字段按矩阵恢复，损坏、未知版本、非法值和写回
+失败均能以可理解诊断安全运行。菜单与偏好设置共享 Rust 状态，鼠标穿透始终保留
+菜单恢复路径，启动焦点握手及连续输入回归探针已固化。
+
+本票按 Non-goals 只保存活动频率和新手提示状态；自主活动由 Issue 05 接入，
+新手提示视觉流程由 Issue 07 接入，多显示器安全区和鼠标所在显示器召回由
+Issue 03 接入。本轮未通过重启整个 Mac 验证登录后自动启动，但自动 smoke 已读取
+macOS 登录项真实状态，人工 QA 已确认界面与系统设置一致。实现、最终 verify、
+人工 QA 和双轴复审已完成；ticket 保持 `claimed`，等待 Ready Pull Request 在
+最新 `integration/macos-preview-candidate` 上通过远端 required check。
