@@ -317,7 +317,7 @@ async function handleReloadedPack(payload: PetPackPayload): Promise<void> {
     if (!(await mountPack(payload, loadingOperation))) {
       return;
     }
-      status.value = "已从原生事件重新加载示例宠物包。";
+    status.value = "已从原生事件重新加载示例宠物包。";
   } catch (error) {
     const failure = normalizeError(error);
     if (!claimFailure(failure, loadingOperation)) {

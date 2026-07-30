@@ -87,6 +87,38 @@ Blocked by: none
   路由恢复、文案校正、退出前存活／最终干净退出双状态和恢复人工项修复；Rust
   回归与真实 desktop smoke 覆盖 developer → preferences 闭环，复审两轴均为
   0 个阻塞项。
+- 2026-07-30 12:31 CST：首次人工 QA 发现正常 `.app` 启动会抢走 Codex
+  输入焦点，且人工命令在待观察实例前先可见运行自动 smoke，造成宠物／偏好设置
+  闪动。最小复现确认普通 `NSApplicationActivationPolicyRegular` 会在 100 ms
+  内成为前台应用；补充真实前台 PID 门禁后旧实现按预期失败。修复采用
+  `LSUIElement` bundle 身份与运行时 `Accessory` 激活策略，并将自动 smoke 与
+  单次人工启动拆分，避免把自动窗口活动混入人工启动观察。
+- 2026-07-30 12:47 CST：第二轮人工 QA 发现旧
+  `CanJoinAllSpaces + FullScreenAuxiliary` 只能跨 Space，无法覆盖其他应用普通
+  全屏。依据 macOS 13+ 的原生窗口集合语义补充
+  `CanJoinAllApplications`，并清除互斥的 `Primary`／`Auxiliary` 角色位；原生
+  行为测试先红后绿。
+- 2026-07-30 13:18 CST：Standards 复审发现旧焦点门禁只排除宠物 PID，无法
+  证明原前台应用始终未变，且人工 QA 可复用过期自动报告。修复后门禁要求全部
+  采样严格等于启动前 PID；自动报告同时绑定桌面源码 SHA-256 指纹，覆盖
+  `src`、`src-tauri`、`assets`、`scripts`、根 `index.html` 与工具链／构建
+  配置。缺失、失败或指纹不匹配的报告会拒绝进入人工 QA。
+- 2026-07-30 13:24 CST：严格冷启动门禁进一步发现仅在 Tauri `setup` 中切换
+  `Accessory` 仍可能晚于系统激活；将激活策略提前到 event loop 启动之前后，
+  bundle 冷启动两次前台 PID 采样均保持为原应用。最终退出验收还暴露了子进程
+  退出事件与状态检查之间的竞态，按先订阅、再复查、最后超时兜底的顺序修复并
+  添加回归测试。
+- 2026-07-30 13:29 CST：用户在最终源码指纹对应的真实 `.app` 中逐项确认单次
+  启动与焦点、透明合成、Space／其他应用普通全屏、菜单栏隐藏／恢复、偏好设置
+  重建、受控开发入口、物理点击穿透与菜单退出全部通过；应用持续运行到退出项
+  并以退出码 0 干净结束。
+- 2026-07-30 13:38 CST：最终 Standards 复审发现退出竞态测试只覆盖“监听后
+  退出”，没有覆盖“调用 helper 前已经退出且事件已错过”的关键分支；补充
+  预退出状态回归测试后 desktop QA 单测为 16/16。同期修正本票在 `App.vue`
+  引入的一处多余缩进。
+- 2026-07-30 13:41 CST：上述测试／格式修正改变桌面源码指纹，因此旧验证证据
+  按规范失效。已在最终源码上重新运行 `pnpm verify`、自动 smoke 与单次人工
+  QA；用户再次从真实菜单栏执行退出并确认通过。
 
 ## Closeout Evidence
 
@@ -96,34 +128,37 @@ Blocked by: none
 
 - Status: passed
 - Command: `pnpm verify`
-- Result: 2026-07-30 12:21 CST 通过；Rust workspace、126 个 Web 测试、2 个
-  Chromium E2E、scope／architecture、lint、WebView 构建、release Tauri 构建
-  与 closeout 扫描均通过。
+- Result: 2026-07-30 13:39 CST 通过；scope／architecture、34 个 Rust
+  测试、134 个 Web 测试、2 个 Chromium E2E、lint、WebView 构建、release
+  Tauri 构建与 closeout 扫描均通过。
 
 ### Manual QA
 
-- Status: pending
+- Status: passed
 - Command: `pnpm qa:desktop`
-- Result: `pnpm qa:desktop:auto` 于 2026-07-30 12:19 CST 通过 8 项真实 Tauri
-  自动 smoke，包含启动拓扑、非聚焦窗口属性、菜单隐藏／恢复、
-  developer → preferences 路由恢复、设置关闭重建与宠物持续存活。
-- Reason: 尚需用户在真实 macOS 交互桌面确认视觉合成、Space／普通全屏、
-  真实菜单栏点击、物理点击穿透及最终菜单退出；自动 smoke 不替代这些判断。
+- Result: `pnpm qa:desktop:auto` 于 2026-07-30 13:39 CST 通过 8 项真实 Tauri
+  smoke，且前台 PID 两次采样均保持为原应用；用户于 13:41 CST 在单次启动的
+  真实 `.app` 中确认 6 项人工清单全部通过。自动与人工报告的源码指纹均为
+  `a9c39b89225f71c011862e660f949569d1543e6a236db9f5352f7382dc69795f`，
+  人工报告记录
+  `appStayedRunningUntilExitCheck=true`、`appExitedCleanly=true`、
+  `passed=true`。
 
 ### Review
 
 - Standards: passed
 - Spec: passed
-- Notes: 2026-07-30 双轴复审均为 `Blocking findings: 0`；首次 4 个阻塞项已
-  修复并由契约测试、Rust 生命周期测试和真实 desktop smoke 验证。
+- Notes: 最终双轴复审均为 `Blocking findings: 0`。Standards 首轮发现
+  退出竞态的预退出分支缺少回归测试，修复后确认该项与格式观察均已关闭；因修复
+  使验证证据失效，已重跑完整验证和桌面 QA，并在相同最终源码指纹上完成复核。
 
 ### Commit
 
-- Status: passed
-- Hash: `bf17592c140d51af0fa0cdbae8ed77079ec94e8a`
+- Status: pending
+- Reason: 人工 QA 修复与最终证据尚未提交。
 
 ## Answer
 
-产品窗口壳、最小菜单、偏好设置与受控开发预览已实施并通过自动化、真实桌面
-smoke 与双轴 review。由于真实用户人工 QA 尚未执行，本票保持 `claimed`，不得
-标记为 `resolved`。
+产品窗口壳、最小菜单、偏好设置与受控开发预览已实施，真实用户人工 QA 已通过。
+最终 verify 与双轴复审已通过；提交与远端 required check 尚未完成，本票保持
+`claimed`，不得标记为 `resolved`。

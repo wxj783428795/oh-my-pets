@@ -187,24 +187,34 @@ pub fn dispatch_tauri_menu(app: &AppHandle, action: MenuAction) -> Result<(), Wi
 }
 
 #[cfg(target_os = "macos")]
-pub fn enable_pet_full_screen_auxiliary(window: &WebviewWindow) -> tauri::Result<()> {
-    use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
+fn pet_collection_behavior(
+    current: objc2_app_kit::NSWindowCollectionBehavior,
+) -> objc2_app_kit::NSWindowCollectionBehavior {
+    let role_behaviors = objc2_app_kit::NSWindowCollectionBehavior::Primary
+        | objc2_app_kit::NSWindowCollectionBehavior::Auxiliary;
+    (current & !role_behaviors)
+        | objc2_app_kit::NSWindowCollectionBehavior::CanJoinAllSpaces
+        | objc2_app_kit::NSWindowCollectionBehavior::FullScreenAuxiliary
+        | objc2_app_kit::NSWindowCollectionBehavior::CanJoinAllApplications
+}
+
+#[cfg(target_os = "macos")]
+pub fn configure_pet_collection_behavior(window: &WebviewWindow) -> tauri::Result<()> {
+    use objc2_app_kit::NSWindow;
 
     let native_window = window.ns_window()?.cast::<NSWindow>();
     // SAFETY: Tauri owns this live NSWindow for the WebviewWindow, and setup invokes
     // this function on the macOS main thread before background smoke work begins.
     unsafe {
         let native_window = &*native_window;
-        let behavior = native_window.collectionBehavior()
-            | NSWindowCollectionBehavior::CanJoinAllSpaces
-            | NSWindowCollectionBehavior::FullScreenAuxiliary;
+        let behavior = pet_collection_behavior(native_window.collectionBehavior());
         native_window.setCollectionBehavior(behavior);
     }
     Ok(())
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn enable_pet_full_screen_auxiliary(_window: &WebviewWindow) -> tauri::Result<()> {
+pub fn configure_pet_collection_behavior(_window: &WebviewWindow) -> tauri::Result<()> {
     Ok(())
 }
 
@@ -378,5 +388,19 @@ mod tests {
         dispatch_menu(&mut runtime, MenuAction::HidePet).expect("hide should succeed");
 
         assert_eq!(runtime.events, ["hide:Pet"]);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn pet_can_join_other_applications_and_their_full_screen_spaces() {
+        use objc2_app_kit::NSWindowCollectionBehavior;
+
+        let behavior = super::pet_collection_behavior(NSWindowCollectionBehavior::Auxiliary);
+
+        assert!(behavior.contains(NSWindowCollectionBehavior::CanJoinAllSpaces));
+        assert!(behavior.contains(NSWindowCollectionBehavior::FullScreenAuxiliary));
+        assert!(behavior.contains(NSWindowCollectionBehavior::CanJoinAllApplications));
+        assert!(!behavior.contains(NSWindowCollectionBehavior::Auxiliary));
+        assert!(!behavior.contains(NSWindowCollectionBehavior::Primary));
     }
 }

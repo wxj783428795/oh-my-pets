@@ -29,7 +29,7 @@ use tauri::{
 };
 use window_recovery::{WindowSize, WorkArea, recover_position};
 use window_shell::{
-    MenuAction, PET_WINDOW_LABEL, dispatch_tauri_menu, enable_pet_full_screen_auxiliary,
+    MenuAction, PET_WINDOW_LABEL, configure_pet_collection_behavior, dispatch_tauri_menu,
 };
 
 const TRAY_ID: &str = "main-tray";
@@ -475,7 +475,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .manage(AppState::default())
         .on_window_event(|window, event| {
             if window.label() == PET_WINDOW_LABEL
@@ -500,7 +500,7 @@ pub fn run() {
             let window = pet_window(&handle).map_err(|error| error.message)?;
             window.set_always_on_top(true)?;
             window.set_visible_on_all_workspaces(true)?;
-            enable_pet_full_screen_auxiliary(&window)?;
+            configure_pet_collection_behavior(&window)?;
             build_tray(&handle)?;
 
             let state = app.state::<AppState>();
@@ -520,7 +520,11 @@ pub fn run() {
             next_preview_action,
             trigger_preview_action,
             export_diagnostics
-        ])
-        .run(tauri::generate_context!())
-        .expect("failed to run Oh My Pets");
+        ]);
+    let mut app = builder
+        .build(tauri::generate_context!())
+        .expect("failed to build Oh My Pets");
+    #[cfg(target_os = "macos")]
+    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+    app.run(|_, _| {});
 }

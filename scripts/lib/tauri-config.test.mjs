@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
 
 const configUrl = new URL("../../src-tauri/tauri.conf.json", import.meta.url);
+const infoPlistUrl = new URL("../../src-tauri/Info.plist", import.meta.url);
 const capabilityUrl = new URL(
   "../../src-tauri/capabilities/default.json",
   import.meta.url,
@@ -34,6 +35,12 @@ describe("Tauri 内容安全策略", () => {
 });
 
 describe("macOS 产品窗口拓扑", () => {
+  test("app bundle 从 Launch Services 阶段就是不抢焦点的菜单栏应用", async () => {
+    const infoPlist = await readFile(infoPlistUrl, "utf8");
+
+    expect(infoPlist).toMatch(/<key>LSUIElement<\/key>\s*<true\s*\/>/);
+  });
+
   test("启动时只创建不抢焦点的透明宠物窗口", async () => {
     const config = JSON.parse(await readFile(configUrl, "utf8"));
 
