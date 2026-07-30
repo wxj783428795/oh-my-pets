@@ -26,12 +26,20 @@
 
 ## Next Frontier
 
-- `Issue 08`、窗口隐藏修复 `Issue 09` 和菜单栏入口诊断 `Issue 10` 均已关闭，当前没有已领取的实施 frontier。后续功能工作需要按工程流程先澄清范围，并在需要时形成新的 spec 与可领取 ticket；不得直接把 Windows 壳、正式发布或完整首发内容并入已关闭的 macOS 预览版票。
+- `Issue 08`、窗口隐藏修复 `Issue 09` 和菜单栏入口诊断 `Issue 10` 均已关闭。
+- 2026-07-30，后续 `macOS 预览候选版` 已完成 grilling 并形成独立
+  [`spec`](../oh-my-pets-macos-preview-candidate/spec.md) 与
+  [`实施地图`](../oh-my-pets-macos-preview-candidate/map.md)；规划 Pull Request
+  合入 `main` 后，其 `Issue 01` 产品窗口壳和 `Issue 06` 正式卷卷美术成为
+  首批可领取 frontier。
+- 新工作必须在新的实施上下文中领取候选版 ticket；不得把完整首发内容、正式
+  发布或 Windows 壳回写到已经关闭的预览版骨架票。
 
 ## Not yet specified
 
 - 自动更新是否进入 Alpha，待发布和异常恢复策略明确后再决定。
-- 点击穿透、输入权限与状态提示的默认策略，待 `macOS 预览版` 主线和后续 Windows 11 实机验证后再细化。
+- Windows 11 的点击穿透、输入权限与状态提示仍待 Windows 实机验证；macOS
+  候选版默认策略已由后续规格锁定。
 - Alpha 之后的内容生产和商业化方向，待首轮外部验证结果出现后再规划。
 
 ## Out of scope
