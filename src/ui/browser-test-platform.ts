@@ -75,7 +75,7 @@ async function readFixture(): Promise<{
     fetch("/pets/juanjuan/atlas.json"),
   ]).then(async ([manifestResponse, atlasResponse]) => {
     if (!manifestResponse.ok || !atlasResponse.ok) {
-      throw new Error("浏览器测试无法读取仓库内示例宠物包");
+      throw new Error("浏览器测试无法读取仓库内正式卷卷宠物包");
     }
     return {
       manifest: (await manifestResponse.json()) as PetManifest,
@@ -136,11 +136,17 @@ async function loadPack(): Promise<PetPackPayload> {
   return createPack(revision);
 }
 
-function previewStep(action: string): BehaviorStep {
+async function previewStep(requestedAction: string): Promise<BehaviorStep> {
+  const { manifest } = await readFixture();
+  const action = manifest.actions[requestedAction] ? requestedAction : "idle";
   return {
     action,
     reason: `浏览器测试固定动作：${action}`,
-    holdMs: 100,
+    holdMs:
+      manifest.actions[action]?.frames.reduce(
+        (duration, frame) => duration + frame.durationMs,
+        0,
+      ) ?? 100,
   };
 }
 
@@ -194,10 +200,10 @@ async function invoke<T>(
       result = productState;
       break;
     case "next_preview_action":
-      result = previewStep("idle");
+      result = await previewStep("idle");
       break;
     case "trigger_preview_action":
-      result = previewStep(String(args?.action ?? "idle"));
+      result = await previewStep(String(args?.action ?? "idle"));
       break;
     case "reset_window_position":
       result = undefined;

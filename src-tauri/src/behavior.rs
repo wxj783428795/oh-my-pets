@@ -39,7 +39,16 @@ impl PreviewBehavior {
     }
 
     pub fn trigger(&self, requested: &str, actions: &BTreeMap<String, PetAction>) -> BehaviorStep {
-        step_with_fallback(requested, "用户触发的语义动作", 900, actions)
+        let hold_ms = actions
+            .get(requested)
+            .or_else(|| actions.get("idle"))
+            .map(|action| {
+                action.frames.iter().fold(0_u32, |duration, frame| {
+                    duration.saturating_add(frame.duration_ms)
+                })
+            })
+            .unwrap_or(900);
+        step_with_fallback(requested, "用户触发的语义动作", hold_ms, actions)
     }
 }
 
@@ -97,5 +106,30 @@ mod tests {
         assert_eq!(first.action, "idle");
         assert!(first.reason.contains("回退"));
         assert_eq!(second.action, "idle");
+    }
+
+    #[test]
+    fn direct_preview_uses_the_declared_action_duration() {
+        let action = PetAction {
+            r#loop: false,
+            frames: vec![
+                ActionFrame {
+                    frame_ref: "first".to_string(),
+                    duration_ms: 180,
+                },
+                ActionFrame {
+                    frame_ref: "second".to_string(),
+                    duration_ms: 320,
+                },
+            ],
+            cue_points: Vec::new(),
+            layout_override: None,
+            extra: BTreeMap::new(),
+        };
+        let actions = BTreeMap::from([("rare_1".to_string(), action)]);
+
+        let step = PreviewBehavior::default().trigger("rare_1", &actions);
+
+        assert_eq!(step.hold_ms, 500);
     }
 }

@@ -146,7 +146,7 @@ transitions 和 Web Animations。Playwright Clock 可控制 `Date`、timer、
   ticker 的证据。
 - 在页面脚本使用时间前安装 Playwright Clock，或通过同一测试 seam 注入固定
   时间；不要先让实时 ticker 运行若干不可控帧再截图。
-- 固定示例宠物包、动作、帧、位置和缩放；不得随机挑选资源或读取用户目录。
+- 固定正式卷卷宠物包、动作、帧、位置和缩放；不得随机挑选资源或读取用户目录。
 
 **文档事实**：Pixi `Assets.load()` 是 Promise-based，并在 Promise 完成时返回
 已加载资源；纹理加载后仍可能需要解码和上传 GPU。
@@ -232,12 +232,14 @@ pnpm exec playwright show-report target/playwright/report
 **实现约束**：由 Playwright `webServer` 启动根目录 Vite 命令，绑定固定
 loopback host 和固定端口，并启用 strict port；不得复用来源不明的已有服务。
 `pnpm dev:web:e2e` 是供 Playwright `webServer` 调用的内部根 script，
-不是独立的验收命令。测试只覆盖以下三件事：
+不是独立的验收命令。测试只覆盖以下四件事：
 
 1. 首次导航后应用进入 ready 状态。
 2. 示例宠物在真实 Chromium 的 Pixi canvas 中可见，并通过至少一个实际像素
    基线证明 renderer 输出。
 3. 一条受控加载失败后的恢复，或页面 reload 后重新进入 ready 且宠物可见。
+4. 正式宠物包约定的 15 个动作按钮都能驱动真实 PixiJS Canvas 切换到各自
+   独立的固定首帧；该矩阵只验证渲染消费，不验证行为调度或完整用户旅程。
 
 这不是完整用户旅程矩阵。不要在该套件重复托盘、原生窗口恢复、透明窗口合成、
 点击穿透、诊断导出或 macOS 菜单栏断言。

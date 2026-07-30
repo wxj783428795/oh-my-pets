@@ -342,12 +342,16 @@ fn rejects_undeclared_images() {
 }
 
 #[test]
-fn loads_the_mainline_example_pack() {
+fn loads_the_production_juanjuan_pack() {
     let pack_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets/pets/juanjuan");
 
-    let loaded = load_pet_pack(pack_dir, "0.1.0").expect("mainline example pack should load");
+    let loaded = load_pet_pack(pack_dir, "0.1.0").expect("production pack should load");
 
     assert_eq!(loaded.summary.display_name, "卷卷");
+    assert_eq!(loaded.summary.version, "1.0.0");
     assert_eq!(loaded.summary.action_count, 15);
-    assert_eq!(loaded.summary.frame_count, 1);
+    assert_eq!(loaded.summary.frame_count, 86);
+    assert_eq!(loaded.summary.canvas.width, 320);
+    assert_eq!(loaded.summary.canvas.height, 320);
+    assert!(loaded.summary.warnings.is_empty());
 }

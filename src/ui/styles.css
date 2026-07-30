@@ -47,13 +47,13 @@ body {
 .pet-canvas {
   display: grid;
   place-items: center;
-  transform: scale(0.86);
+  transform: scale(0.92);
   transform-origin: center bottom;
   transition: transform 160ms ease-out;
 }
 
 .pet-surface[data-pet-size="small"] .pet-canvas {
-  transform: scale(0.7);
+  transform: scale(0.78);
 }
 
 .pet-surface[data-pet-size="large"] .pet-canvas {
@@ -772,16 +772,29 @@ button:focus-visible {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  max-height: 67px;
-  overflow: hidden;
+  max-height: 88px;
+  overflow: auto;
 }
 
-.action-cloud span {
+.action-cloud button {
+  border: 0;
   padding: 3px 5px;
   color: var(--muted);
   font: 8px/1 monospace;
   background: rgba(52, 41, 31, 0.055);
   border-radius: 4px;
+  cursor: pointer;
+}
+
+.action-cloud button:hover:not(:disabled),
+.action-cloud button:focus-visible {
+  color: var(--ink);
+  background: rgba(46, 170, 163, 0.16);
+}
+
+.action-cloud button:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .status-strip {
