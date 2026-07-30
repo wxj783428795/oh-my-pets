@@ -39,12 +39,18 @@ describe("干净环境与 GitHub CI 契约", () => {
     expect(packageJson.scripts["ci:verify"]).not.toContain("test:e2e:update");
   });
 
-  test("GitHub workflow 使用有限触发、只读权限和标准 ARM64 macOS", async () => {
+  test("GitHub workflow 仅验证受保护目标分支 PR 和手动触发", async () => {
     const workflow = await readRepositoryFile(".github/workflows/verify.yml");
 
-    expect(workflow).toMatch(/\n\s{2}pull_request:\s*\n/);
-    expect(workflow).toMatch(/\n\s{2}push:\s*\n\s{4}branches:\s*\[main\]/);
-    expect(workflow).toMatch(/\n\s{2}workflow_dispatch:\s*\n/);
+    expect(workflow).toContain(`on:
+  pull_request:
+    branches:
+      - main
+      - "integration/**"
+      - "release/**"
+  workflow_dispatch:
+`);
+    expect(workflow).not.toMatch(/\n\s{2}push:/);
     expect(workflow).toContain("permissions:\n  contents: read");
     expect(workflow).not.toContain("pull_request_target:");
     expect(workflow).not.toMatch(/\bwrite\b/);
