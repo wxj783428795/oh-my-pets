@@ -2106,6 +2106,7 @@ name = "oh-my-pets"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "objc2-app-kit",
  "oh-my-pets-domain",
  "serde",
  "serde_json",

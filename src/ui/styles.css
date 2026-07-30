@@ -31,6 +31,118 @@ body {
   background: transparent;
 }
 
+.pet-surface,
+.pet-canvas {
+  width: 320px;
+  height: 320px;
+}
+
+.pet-surface {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+}
+
+.pet-canvas {
+  display: grid;
+  place-items: center;
+}
+
+.pet-canvas canvas {
+  display: block;
+  width: 320px;
+  height: 320px;
+}
+
+.pet-load-error {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  margin: 0;
+  padding: 8px 12px;
+  color: #fff8e8;
+  font-size: 11px;
+  text-align: center;
+  background: rgba(159, 63, 29, 0.88);
+  border-radius: 999px;
+}
+
+.preferences-surface {
+  width: 100vw;
+  min-height: 100vh;
+  padding: 28px 32px;
+  overflow: auto;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.7), transparent 45%),
+    var(--paper);
+}
+
+.preferences-titlebar,
+.developer-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preferences-titlebar {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+  user-select: none;
+}
+
+.preferences-titlebar h1,
+.preferences-placeholder h2,
+.developer-entry h2 {
+  font-family: "Iowan Old Style", "Songti SC", serif;
+  font-weight: 600;
+}
+
+.preferences-titlebar h1 {
+  margin: 5px 0 0;
+  font-size: 32px;
+}
+
+.preferences-titlebar > span,
+.preferences-placeholder p,
+.developer-entry p {
+  color: var(--muted);
+  font: 13px/1.65 "Avenir Next", "PingFang SC", sans-serif;
+}
+
+.preferences-placeholder,
+.developer-entry {
+  margin-top: 20px;
+  padding: 24px;
+  background: rgba(255, 251, 239, 0.75);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.preferences-placeholder h2,
+.developer-entry h2 {
+  margin: 7px 0 8px;
+}
+
+.preferences-placeholder p,
+.developer-entry p {
+  max-width: 580px;
+  margin-bottom: 0;
+}
+
+.developer-link {
+  flex: none;
+  margin-left: 24px;
+  padding: 10px 16px;
+  color: #fff8e8;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  background: var(--orange-dark);
+  border-radius: 999px;
+}
+
 button {
   color: inherit;
   font: inherit;

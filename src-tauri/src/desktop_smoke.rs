@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn report_fails_when_a_required_check_is_missing_or_failed() {
         let mut report = DesktopSmokeReport::new("0.1.0");
-        report.pass("app_startup", "窗口已启动");
+        report.pass("product_window_topology", "窗口拓扑正确");
         report.fail("example_pet_pack_loaded", "宠物包未加载");
 
         let report = report.finish();

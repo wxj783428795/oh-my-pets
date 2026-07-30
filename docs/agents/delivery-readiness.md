@@ -15,7 +15,7 @@
 | `pnpm verify:core`        | 范围/架构、Rust/Vitest、视觉/E2E、lint、WebView 构建            | 否                   |
 | `pnpm verify`             | `verify:core`、真实 `tauri build`、resolved ticket 关闭证据扫描 | 是                   |
 | `pnpm qa:desktop:auto`    | 构建真实 Tauri 应用并执行自动 smoke                             | 仅桌面自动化部分     |
-| `pnpm qa:desktop`         | 构建带图标的本地 `.app`，自动 smoke 后启动 macOS 人工清单       | 是，需验收人逐项确认 |
+| `pnpm qa:desktop`         | 复用已通过的自动报告，构建并单次启动 `.app` 进入人工清单        | 是，需验收人逐项确认 |
 | `pnpm closeout:check`     | 扫描所有 resolved ticket                                        | 是                   |
 
 `pnpm lint:web` 中 Oxlint 只检查 `src/ui`、`scripts`、`tests/e2e` 和根 Vite/Playwright 配置，并显式排除辅助资产与生成物；它能够分析 Vue `<script>`，但不补齐 template 专用规则。`vue-tsc --noEmit` 继续承担 Vue/TypeScript 类型检查，二者任一失败都会阻断该命令。
@@ -40,14 +40,17 @@ Pull Request。分支职责、bugfix 路由、merge commit 和 ruleset 生命周
 
 `pnpm qa:desktop:auto` 的报告写入被 Git 忽略的 `target/desktop-smoke/report.json`，覆盖：
 
-- 真实 Tauri 主窗口启动并可见
+- 启动前后的真实前台应用 PID 保持不变，宠物应用没有抢走键盘焦点
+- 启动时只有真实 `pet` 窗口可见，`preferences` 未创建且旧 `main` 角色不存在
+- 宠物窗口不聚焦、无边框、不可缩放且始终置顶
 - Rust 示例宠物包加载且包含动作与图集帧
-- Vue WebView 完成 PixiJS 示例宠物挂载
-- 复用托盘菜单处理器隐藏并恢复窗口
+- `pet` WebView 完成 PixiJS 示例宠物挂载
+- 复用产品菜单处理器隐藏并恢复宠物
+- 偏好设置按需创建、重复显示、关闭后重建，且宠物持续运行
 - 真实窗口开启并关闭点击穿透
 - 导出并重新读取本地诊断 Markdown
 
-这些检查不模拟 WebView 或窗口状态，但仍不能替代人在真实桌面的判断。`pnpm qa:desktop` 会额外构建仅供本地 QA 的 macOS `.app`，确保 Dock 使用仓库品牌图标；这不代表正式发布签名、安装包或分发流程已经完成。验收人需要确认 Dock 与菜单栏入口真实可见、菜单栏可恢复窗口、示例宠物可见且语义动作状态持续切换、点击穿透体验正确、诊断文件可定位阅读。当前工程示例包只有一张占位帧，P0 不把首发逐帧动画资源列为通过条件。命令只允许在 macOS（Darwin）交互式终端接受逐项结果，且 Tauri 应用必须成功启动并在问答期间保持运行；记录写入 `target/desktop-smoke/manual-qa.json`，非 macOS、非交互环境或应用提前退出都会失败。
+这些检查不模拟 WebView 或窗口状态，但仍不能替代人在真实桌面的判断。为避免待观察启动前先出现一轮可见的自动 smoke，必须先单独运行 `pnpm qa:desktop:auto`；该命令把参与桌面构建的源码与配置计算为 SHA-256 指纹并写入报告。`pnpm qa:desktop` 只接受现有的已通过且指纹与当前工作树一致的报告，再构建并单次启动仅供本地 QA 的 macOS `.app`。报告缺失、不满足当前契约或源码不匹配时，人工命令会要求重跑自动 smoke；人工报告会固化本次已核对的同一源码指纹。该 `.app` 带仓库品牌图标，但作为 `LSUIElement` 菜单栏应用不会占据 Dock；这不代表正式发布签名、安装包或分发流程已经完成。验收人需要确认正常启动只显示宠物且不抢焦点，宠物透明、无系统边框和阴影、始终置顶，并能跨 Space 和其他应用普通全屏保持可见；还需真实点击菜单栏验证隐藏／恢复宠物、重复打开及关闭偏好设置、从偏好设置进入高级开发预览、点击穿透的物理体验与恢复，以及显式退出会清理全部窗口与菜单栏入口。当前工程示例包只有一张占位帧，本票不把首发逐帧动画资源列为通过条件。命令只允许在 macOS（Darwin）交互式终端接受逐项结果；Tauri 应用必须成功启动并持续运行到最后的退出检查，随后应由菜单操作干净结束，二者都会记录在 `target/desktop-smoke/manual-qa.json`。非 macOS、非交互环境、退出检查前提前结束或最后未干净退出都会失败。
 
 ## 仓库边界
 
