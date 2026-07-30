@@ -32,6 +32,12 @@
 
 `.github/workflows/verify.yml` 只响应 pull request、`main` push 和手动触发，运行于标准 GitHub-hosted `macos-latest` ARM64 runner。workflow 使用只读仓库权限、30 分钟 timeout 和按 PR/分支取消旧运行的 concurrency；checkout 获取完整 Git 历史，供 closeout 验证已记录的实现提交；不包含矩阵、coverage、发布、签名或部署，只在失败时上传 `target/playwright/` 与桌面 smoke 诊断并保留 3 天。Actions 均固定到已审阅提交 SHA。GitHub 首次真实运行通过前，本机 `pnpm ci:verify` 只能证明 clean bootstrap 契约，不能冒充远端通过；`main` required check 也只能在真实 job 名稳定后配置，并应要求分支为最新提交。
 
+`pull_request` 未限制 base，因此 ticket PR 指向临时 `integration/<spec>` 时也会
+运行相同 job；只有目标分支 ruleset 把 `macOS ARM64 最终验证` 设为 required
+check，CI 才成为服务端合并门禁。`main` push 运行只作合并后审计，不能替代
+Pull Request。分支职责、bugfix 路由、merge commit 和 ruleset 生命周期见
+`branch-management.md`。
+
 `pnpm qa:desktop:auto` 的报告写入被 Git 忽略的 `target/desktop-smoke/report.json`，覆盖：
 
 - 真实 Tauri 主窗口启动并可见

@@ -10,6 +10,7 @@
 - issue 编号从 `01` 开始，不使用单个汇总 tickets 文件
 - issue 顶部应包含 `Status:` 行，用于记录分诊状态；状态词见 `triage-labels.md`
 - 新实施 issue 顶部应包含 `Closeout-Contract: v1`，用于启用机械关闭校验
+- 新实施 issue 可用 `Kind: feature|bugfix|hotfix|process` 记录工作类别；缺省为 `feature`
 - 讨论记录追加在文件底部的 `## Comments` 小节下
 
 ## 当技能要求“发布到 issue tracker”时
@@ -28,7 +29,16 @@
 - `claimed`：已领取并正在实施或验收。
 - `resolved`：已满足下述 Definition of Done。
 
-领取 ticket 时，应先确认其未被阻塞，并在 `## Comments` 中记录领取时间。发现新的阻塞项时，把状态保持为 `claimed`，同时在 `Blocked by:` 或 `## Comments` 中记录阻塞关系。
+领取 ticket 时，应先确认其未被阻塞，并按 `branch-management.md` 确定 base 和
+Pull Request target。在 `## Comments` 中记录领取时间、分支名、base 分支、
+base commit 和 target。发现新的阻塞项时，把状态保持为 `claimed`，同时在
+`Blocked by:` 或 `## Comments` 中记录阻塞关系。
+
+bugfix 和 hotfix 仍使用相同生命周期与 Closeout Contract。当前 ticket 范围内
+的回归在当前 ticket 修复；独立缺陷建立新 ticket，并按缺陷实际存在于 `main`
+还是临时 integration 选择 base。只涉及 `main` 与 integration 时先修 `main`
+再前向同步；存在受影响的已维护 release 时，从最早维护线修复，再逐线前向移植
+到 `main` 和 integration。具体路由见 `branch-management.md`。
 
 ## Definition of Done
 
@@ -40,6 +50,7 @@
 4. 已完成 Standards + Spec 双轴 code review，所有阻塞性发现均已修复或登记为 blocker。
 5. 实施变更已使用中文提交信息形成可追溯提交，提交记录已写回 ticket；用户明确要求不提交时除外。
 6. `## Answer` 或实施结果中已记录实际变更、验证证据、已知限制和遗留风险。
+7. 已创建指向开工时记录 target 的 Pull Request，或记录用户明确要求不创建 Pull Request 的流程例外。
 
 任一条件缺失时，ticket 必须保持 `claimed`。当前 ticket 所需的人工 QA 不能拆成独立 ticket 来绕过完成条件；验收中发现的独立缺陷可以建立 bug ticket，并按是否阻塞当前验收记录依赖。
 
@@ -88,6 +99,7 @@ pnpm closeout:check -- --ticket .scratch/<feature>/issues/<NN>-<slug>.md
 - 地图文件：`.scratch/<effort>/map.md`
 - 子 ticket：`.scratch/<effort>/issues/<NN>-<slug>.md`
 - 子 ticket 顶部可包含 `Type:`，可选值为 `research`、`prototype`、`grilling`、`task`
+- 实施 ticket 顶部可包含 `Kind:`，可选值为 `feature`、`bugfix`、`hotfix`、`process`
 - 子 ticket 顶部可包含 `Blocked by:`，记录阻塞它的 issue 编号
 - 可领取的 frontier ticket 条件是：未关闭、未阻塞、未被领取
 - 领取时先写入 `Status: claimed`

@@ -56,13 +56,26 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 
 - 常规功能先经 `grill-with-docs` 澄清；`wayfinder`、研究、grilling 和 prototype 阶段只形成决策与证据，不直接实施正式产品功能。
 - 多会话或范围较大的工作在实施前必须依次形成 spec 和可领取 tickets；明确的小型单会话改动可在澄清并确定验收标准后直接实施。
+- 每次新开发、bugfix、hotfix、流程或正式文档工作都必须先按 `docs/agents/branch-management.md` 检查工作树、分类工作、确定 base/PR target，并创建独立分支；工作树不干净或存在并行任务时使用独立 worktree。禁止直接在 `main` 或 `integration/*` 上实施。
 - 对已经 ticket 化的工作，修改产品代码前必须将当前 ticket 设为 `claimed`，并在新的实施上下文中读取 ticket、spec、`CONTEXT.md` 和相关 ADR。
 - 实施默认按 TDD 小切片推进；自动化检查不能替代 ticket 要求的人工验收。
 - 最后一次相关改动后必须运行 `pnpm verify`；后续再次修改相关文件会使该结果失效，提交前必须重跑。
 - 提交前必须完成 Standards + Spec 双轴 code review，并处理所有阻塞性发现。
 - 人工验收、review 或提交记录缺失时，ticket 必须保持 `claimed`，不得标记为 `resolved`。
 - 新实施 ticket 必须声明 `Closeout-Contract: v1` 并维护结构化 `## Closeout Evidence`；resolved 前运行 `pnpm closeout:check -- --ticket <ticket-path>`。
-- 任何流程例外都需要用户明确批准，并记录在 ticket 的 `## Comments` 中。
+- 任何流程例外都需要用户明确批准；有 ticket 时记录在 `## Comments`，用户同时明确要求不建 ticket/PR 时记录在最终交接和下一份适用的正式流程记录中。
+
+## 分支管理
+
+分支、Pull Request、bugfix/hotfix 路由和 GitHub 门禁以 `docs/agents/branch-management.md` 为唯一详细规范：
+
+- `main` 是唯一永久主线，禁止正常直接提交或 push；所有正式变更通过 Pull Request 和 `macOS ARM64 最终验证` 进入。
+- 独立可交付小票从最新 `main` 创建短分支并 PR 回 `main`；跨多票且中间状态不可交付的 accepted spec 使用受保护、完成即删除的 `integration/<spec>`。
+- 一张 ticket 对应一个主要实施分支和主要 PR。agent 分支使用 `codex/` 前缀；前置依赖必须先进入目标分支，禁止用 ticket 分支互相合并隐藏依赖。
+- 普通 bugfix 从缺陷实际存在的目标分支创建 `codex/fix-*`；integration 独有缺陷只修到 integration；`main` 修复随后通过同步 PR 前向合入仍受影响的 integration。存在已维护 release 时，从最早受影响维护线修复并逐线前向移植。
+- hotfix 也必须走分支、PR、CI 和 review；应急 bypass 需要用户明确批准并补跑远端验证。
+- 当前只允许 merge commit，关闭 squash、rebase 和 linear history，以保留 Closeout Evidence 记录的实现提交 SHA。
+- `main` 使用永久 ruleset；每个 integration 使用精确匹配的临时 ruleset。两者都必须要求 PR、Strict required check、对话解决，并禁止强推和删除。
 
 ## 编码风格与命名约定
 
@@ -76,9 +89,9 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 
 ## 提交与合并请求
 
-当前仓库已初始化 Git，但尚无历史提交可供总结。使用简洁、祈使句式的中文提交信息，例如：`新增宠物列表基础模型`、`补充宠物包校验测试`。
+使用简洁、祈使句式的中文提交信息，例如：`新增宠物列表基础模型`、`补充宠物包校验测试`。
 
-PR 应包含：变更目的、主要改动、测试结果，以及任何配置影响。涉及界面或资源变更时，请附截图、录屏或示例文件路径。
+PR 应包含：目标分支、ticket 或 spec 路径、变更目的、主要改动、测试结果，以及任何配置影响。涉及界面或资源变更时，请附截图、录屏或示例文件路径。合并方式、required check 和分支清理由 `docs/agents/branch-management.md` 约束。
 
 ## 维护要求
 
@@ -89,6 +102,10 @@ PR 应包含：变更目的、主要改动、测试结果，以及任何配置�
 ### Issue tracker
 
 本仓库使用本地 Markdown 作为 issue tracker，spec 与 issue 文件存放在 `.scratch/<feature>/`。见 `docs/agents/issue-tracker.md`。完整工程阶段和开工门槛见 `docs/agents/engineering-flow.md`。
+
+### Branch management
+
+每次进入新的开发或缺陷修复前，必须按 `docs/agents/branch-management.md` 选择 base、目标分支、topic 分支与 worktree；不得从当前打开的分支状态猜测实施路径。
 
 ### Triage labels
 
