@@ -154,11 +154,11 @@ Blocked by: none
 
 ### Commit
 
-- Status: pending
-- Reason: 人工 QA 修复与最终证据尚未提交。
+- Status: committed
+- Hash: `ea1dc6f7ef7d547ecae6f583c5edf026a6efb3b9`
 
 ## Answer
 
 产品窗口壳、最小菜单、偏好设置与受控开发预览已实施，真实用户人工 QA 已通过。
-最终 verify 与双轴复审已通过；提交与远端 required check 尚未完成，本票保持
-`claimed`，不得标记为 `resolved`。
+最终 verify、双轴复审与实现提交已完成；远端 required check 尚未通过，本票
+保持 `claimed`，不得标记为 `resolved`。
