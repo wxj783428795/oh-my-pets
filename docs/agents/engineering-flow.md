@@ -2,7 +2,7 @@
 
 本仓库的工程工作默认遵循主流程：
 
-`grill-with-docs -> [to-spec -> to-tickets] -> implement(tdd) -> code-review -> commit`
+`grill-with-docs -> [to-spec -> to-tickets] -> select-base/claim/create-branch -> implement(tdd) -> verify -> code-review -> commit -> pull-request -> merge`
 
 这些阶段是防止在问题、规格和验收标准尚未收口时过早修改产品代码的硬约束，不是可选建议。
 
@@ -13,7 +13,7 @@
 - 面对范围大、决策多、边界模糊的绿地工作，先使用 `wayfinder`。该阶段只产出决策、证据、原型结论和待解决问题，不实施正式产品功能；地图收口后在 `to-spec` 处汇入主流程。
 - 会跨多个会话的工作必须先通过 `to-spec` 形成规格，再通过 `to-tickets` 拆成带 blocking edges 的 tracer-bullet tickets。
 - 范围确实很小、能在当前上下文内完成并验收的工作，可以在完成 `grill-with-docs` 后直接进入 `implement`，不强制创建 spec 和 ticket。
-- 缺陷修复可以从分诊或诊断开始，但仍需明确复现条件、预期行为和完成标准。
+- 缺陷修复可以从分诊或诊断开始，但仍需明确复现条件、预期行为、影响分支和完成标准；具体 base、前向同步与 hotfix 规则见 `branch-management.md`。
 
 ## 开工门槛
 
@@ -22,6 +22,8 @@
 1. 相关决策已经收口，不存在会改变实现方向的未决问题。
 2. 范围、非目标、行为要求和验收标准已经明确。
 3. 实施上下文已读取 `CONTEXT.md` 和适用的 ADR。
+4. 已按 `branch-management.md` 检查当前工作树、分类工作并确定 base 与 Pull Request target。
+5. 已创建独立 topic 分支；工作树不干净或存在并行任务时使用独立 worktree，并确认不在 `main` 或 `integration/*` 上直接实施。
 
 对于多会话或已经 ticket 化的工作，还必须同时满足：
 
@@ -29,12 +31,14 @@
 2. 当前 ticket 是一条端到端 tracer bullet，依赖和阻塞关系已记录。
 3. ticket 状态已改为 `claimed`。
 4. 新的实施上下文已读取当前 ticket 和相关 spec。
+5. ticket `## Comments` 已记录分支名、base 分支、base commit 和 Pull Request target。
 
 `wayfinder`、研究、grilling 和 prototype ticket 不能直接作为正式产品代码的开工授权。决策地图收口后，除非工作被明确证明为单会话小改动，否则必须经过 `to-spec` 和 `to-tickets`。
 
 ## 实施与验证
 
 - `grill-with-docs` 到 `to-tickets` 应保持在同一未中断的上下文中；每张实施 ticket 再使用新的上下文，避免把规划阶段的隐含假设带入实现。
+- 每张实施 ticket 使用自己的 topic 分支和 Pull Request。依赖票必须先经 PR 进入目标分支，禁止在 ticket 分支之间直接合并来绕过 blocking edges。
 - 实施按可验证的小切片推进，默认采用 red-green-refactor 的 TDD 循环。
 - 自动化测试、格式检查、lint 和构建只证明机器可检查的部分，不能替代 ticket 要求的人工体验验收。
 - `pnpm verify:core` 只提供快速反馈；最后一次相关改动完成后，正式主线必须运行包含真实 Tauri 构建与 closeout 扫描的根目录 `pnpm verify`。任何后续相关改动都会使已有结果失效，必须重跑后才能进入 review 或提交。
@@ -52,6 +56,12 @@
 
 阻塞性 review 发现必须先修复或登记为明确 blocker。随后使用中文提交信息形成可追溯提交；存在 ticket 时，还要把验证证据、review 结论和提交记录写回 ticket。只有满足 `docs/agents/issue-tracker.md` 的 Definition of Done 后，ticket 才能改为 `resolved`。
 
+提交完成后通过 Pull Request 合入开工时记录的目标分支。Pull Request 必须在最新
+target 上通过 `macOS ARM64 最终验证`，解决 review 对话，并使用 merge commit；
+不得在本地直接合并后 push 受保护分支。多票 spec 的 ticket 先进入临时
+integration，最终再以单一 Pull Request 进入 `main`。完整规则见
+`branch-management.md`。
+
 新实施 ticket 使用 `Closeout-Contract: v1`。准备关闭时运行：
 
 ```bash
@@ -65,5 +75,6 @@ pnpm closeout:check -- --ticket .scratch/<feature>/issues/<NN>-<slug>.md
 ## 上下文与例外
 
 - 规划阶段应连续推进到 tickets 可领取；每张实施 ticket 重新建立上下文。
-- 任何跳过阶段或完成门槛的例外都必须由用户明确批准，并在 ticket 的 `## Comments` 中记录原因、范围和风险。
+- 每次进入新的实施上下文都必须重新执行分支开工检查；不能沿用上一 ticket 的分支或 worktree。
+- 任何跳过阶段或完成门槛的例外都必须由用户明确批准。有 ticket 时在 `## Comments` 中记录原因、范围和风险；用户同时明确要求不建 ticket/PR 时，按 `branch-management.md` 在最终交接和下一份适用的正式流程记录中留痕。
 - 不为已经发生的历史工作伪造流程记录；发现流程偏差后，从当前状态如实补齐缺失门槛。
