@@ -2,13 +2,16 @@
 
 本仓库的工程工作默认遵循主流程：
 
-`grill-with-docs -> [to-spec -> to-tickets] -> select-base/claim/create-branch -> implement(tdd) -> verify -> code-review -> commit -> pull-request -> merge`
+`create-plan-branch -> grill-with-docs -> [to-spec -> to-tickets] -> accept -> select-delivery-base/create-integration-or-topic -> claim -> implement(tdd) -> verify -> code-review -> commit -> pull-request -> merge`
 
 这些阶段是防止在问题、规格和验收标准尚未收口时过早修改产品代码的硬约束，不是可选建议。
 
 ## 入口选择
 
 - 有代码库的常规功能工作从 `grill-with-docs` 开始，在同一上下文中澄清需求并把关键结论写入 `CONTEXT.md` 或 ADR。
+- 规划资产在短期 `codex/plan-<effort>` 分支中形成；规划尚未获准实施时不得
+  合入 `main`，也不预建 integration。worktree 只用于隔离目录，不能代替分支
+  和提交表达规划状态。
 - 无法只靠讨论回答的问题，可以经 `handoff -> prototype -> handoff` 做 throwaway 验证；原型只回答问题，不演变为正式产品主线。
 - 面对范围大、决策多、边界模糊的绿地工作，先使用 `wayfinder`。该阶段只产出决策、证据、原型结论和待解决问题，不实施正式产品功能；地图收口后在 `to-spec` 处汇入主流程。
 - 会跨多个会话的工作必须先通过 `to-spec` 形成规格，再通过 `to-tickets` 拆成带 blocking edges 的 tracer-bullet tickets。
@@ -35,9 +38,21 @@
 
 `wayfinder`、研究、grilling 和 prototype ticket 不能直接作为正式产品代码的开工授权。决策地图收口后，除非工作被明确证明为单会话小改动，否则必须经过 `to-spec` 和 `to-tickets`。
 
+规划获准实施后必须结束 planning 阶段，再按 `branch-management.md` 选择路径：
+
+- 独立可交付工作从最新 `main` 新建实施分支，迁入已接受的规划提交；不得直接
+  把 planning 分支变成产品实施分支。
+- 跨多票且中间状态不可交付的 accepted spec，从最新 `main` 创建临时
+  integration，以 planning bootstrap PR 迁入已接受规划，合并后删除 planning
+  分支；ticket 随后从 integration 领取。
+- 规划被取消时记录必要结论并删除 planning 分支，不以“保存文档”为由把未接受
+  的产品承诺合入 `main`。
+
 ## 实施与验证
 
-- `grill-with-docs` 到 `to-tickets` 应保持在同一未中断的上下文中；每张实施 ticket 再使用新的上下文，避免把规划阶段的隐含假设带入实现。
+- `grill-with-docs` 到 `to-tickets` 应保持在同一未中断的上下文和 planning
+  分支中；规划迁移到正式目标分支后，每张实施 ticket 再使用新的上下文，避免
+  把规划阶段的隐含假设带入实现。
 - 每张实施 ticket 使用自己的 topic 分支和 Pull Request。依赖票必须先经 PR 进入目标分支，禁止在 ticket 分支之间直接合并来绕过 blocking edges。
 - 实施按可验证的小切片推进，默认采用 red-green-refactor 的 TDD 循环。
 - 自动化测试、格式检查、lint 和构建只证明机器可检查的部分，不能替代 ticket 要求的人工体验验收。
@@ -74,7 +89,9 @@ pnpm closeout:check -- --ticket .scratch/<feature>/issues/<NN>-<slug>.md
 
 ## 上下文与例外
 
-- 规划阶段应连续推进到 tickets 可领取；每张实施 ticket 重新建立上下文。
+- 规划阶段应在 planning 分支连续推进到 tickets 可领取；规划获准后按
+  `branch-management.md` 迁移并删除 planning 分支，每张实施 ticket 重新建立
+  上下文。
 - 每次进入新的实施上下文都必须重新执行分支开工检查；不能沿用上一 ticket 的分支或 worktree。
 - 任何跳过阶段或完成门槛的例外都必须由用户明确批准。有 ticket 时在 `## Comments` 中记录原因、范围和风险；用户同时明确要求不建 ticket/PR 时，按 `branch-management.md` 在最终交接和下一份适用的正式流程记录中留痕。
 - 不为已经发生的历史工作伪造流程记录；发现流程偏差后，从当前状态如实补齐缺失门槛。

@@ -55,6 +55,9 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 所有工程工作必须遵循 `docs/agents/engineering-flow.md`。以下规则是开工和关闭 ticket 的硬门槛：
 
 - 常规功能先经 `grill-with-docs` 澄清；`wayfinder`、研究、grilling 和 prototype 阶段只形成决策与证据，不直接实施正式产品功能。
+- 产品规划使用短期 `codex/plan-*` 分支；尚未获准实施时不合入 `main`、不预建
+  integration。规划获准后迁入正式实施分支或临时 integration，并删除 planning
+  分支。
 - 多会话或范围较大的工作在实施前必须依次形成 spec 和可领取 tickets；明确的小型单会话改动可在澄清并确定验收标准后直接实施。
 - 每次新开发、bugfix、hotfix、流程或正式文档工作都必须先按 `docs/agents/branch-management.md` 检查工作树、分类工作、确定 base/PR target，并创建独立分支；工作树不干净或存在并行任务时使用独立 worktree。禁止直接在 `main` 或 `integration/*` 上实施。
 - 对已经 ticket 化的工作，修改产品代码前必须将当前 ticket 设为 `claimed`，并在新的实施上下文中读取 ticket、spec、`CONTEXT.md` 和相关 ADR。
@@ -70,7 +73,11 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 分支、Pull Request、bugfix/hotfix 路由和 GitHub 门禁以 `docs/agents/branch-management.md` 为唯一详细规范：
 
 - `main` 是唯一永久主线，禁止正常直接提交或 push；所有正式变更通过 Pull Request 和 `macOS ARM64 最终验证` 进入。
+- `main` 只接收已经交付的产品事实和已经生效的工程治理；未获准实施或尚未
+  达到交付条件的产品规划保留在短期 `codex/plan-*`。
 - 独立可交付小票从最新 `main` 创建短分支并 PR 回 `main`；跨多票且中间状态不可交付的 accepted spec 使用受保护、完成即删除的 `integration/<spec>`。
+- integration 只在 accepted spec、可领取 tickets 和实施批准齐备后创建；
+  planning bootstrap PR 合并后立即删除 planning 分支，两者不得长期并行。
 - 一张 ticket 对应一个主要实施分支和主要 PR。agent 分支使用 `codex/` 前缀；前置依赖必须先进入目标分支，禁止用 ticket 分支互相合并隐藏依赖。
 - 普通 bugfix 从缺陷实际存在的目标分支创建 `codex/fix-*`；integration 独有缺陷只修到 integration；`main` 修复随后通过同步 PR 前向合入仍受影响的 integration。存在已维护 release 时，从最早受影响维护线修复并逐线前向移植。
 - hotfix 也必须走分支、PR、CI 和 review；应急 bypass 需要用户明确批准并补跑远端验证。
