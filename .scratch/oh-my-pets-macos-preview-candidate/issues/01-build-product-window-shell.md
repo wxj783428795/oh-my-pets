@@ -2,7 +2,7 @@
 
 Type: task
 Kind: feature
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: none
 
@@ -119,6 +119,11 @@ Blocked by: none
 - 2026-07-30 13:41 CST：上述测试／格式修正改变桌面源码指纹，因此旧验证证据
   按规范失效。已在最终源码上重新运行 `pnpm verify`、自动 smoke 与单次人工
   QA；用户再次从真实菜单栏执行退出并确认通过。
+- 2026-07-30 13:51 CST：实现与最终验收证据 head `8159189` 已通过远端
+  `macOS ARM64 最终验证`（GitHub Actions run `30517416932`，8 分 8 秒）和
+  GitGuardian；Pull Request #7 已从 Draft 转为 Ready，merge state 为
+  `CLEAN`。本票满足关闭条件并标记 `resolved`；后续仅允许 merge commit 合入
+  `integration/macos-preview-candidate`。
 
 ## Closeout Evidence
 
@@ -130,7 +135,8 @@ Blocked by: none
 - Command: `pnpm verify`
 - Result: 2026-07-30 13:39 CST 通过；scope／architecture、34 个 Rust
   测试、134 个 Web 测试、2 个 Chromium E2E、lint、WebView 构建、release
-  Tauri 构建与 closeout 扫描均通过。
+  Tauri 构建与 closeout 扫描均通过。远端 head `8159189` 的
+  `macOS ARM64 最终验证` 于 13:51 CST 通过。
 
 ### Manual QA
 
@@ -160,5 +166,6 @@ Blocked by: none
 ## Answer
 
 产品窗口壳、最小菜单、偏好设置与受控开发预览已实施，真实用户人工 QA 已通过。
-最终 verify、双轴复审与实现提交已完成；远端 required check 尚未通过，本票
-保持 `claimed`，不得标记为 `resolved`。
+最终 verify、双轴复审、实现提交、Ready Pull Request 与远端 required check
+均已完成，本票已标记 `resolved`，等待按 merge commit 合入
+`integration/macos-preview-candidate`。
