@@ -52,6 +52,7 @@ const MIN_MEDIAN_FRAME_HEIGHT = Object.freeze({
   rare_2: 205,
 });
 const NORMALIZED_SIGNATURE_EDGE = 48;
+const MAX_NORMALIZED_MEAN_DELTA = 2;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
 function issue(code, path, message) {
@@ -360,34 +361,95 @@ function frameBytes(image, frame) {
   return bytes;
 }
 
-function normalizedFrameSignature(image, frame, bounds) {
+function normalizedAxisSamples(length) {
+  return Array.from({ length: NORMALIZED_SIGNATURE_EDGE }, (_, index) => {
+    const coordinate = Math.max(
+      0,
+      Math.min(
+        length - 1,
+        ((index + 0.5) * length) / NORMALIZED_SIGNATURE_EDGE - 0.5,
+      ),
+    );
+    const lower = Math.floor(coordinate);
+    return {
+      lower,
+      upper: Math.min(length - 1, lower + 1),
+      weight: coordinate - lower,
+    };
+  });
+}
+
+function bilinearChannel(image, frame, bounds, xSample, ySample, channel) {
+  const x0 = frame.x + bounds.minX + xSample.lower;
+  const x1 = frame.x + bounds.minX + xSample.upper;
+  const y0 = frame.y + bounds.minY + ySample.lower;
+  const y1 = frame.y + bounds.minY + ySample.upper;
+  const topLeft = image.data[pixelOffset(image, x0, y0) + channel];
+  const topRight = image.data[pixelOffset(image, x1, y0) + channel];
+  const bottomLeft = image.data[pixelOffset(image, x0, y1) + channel];
+  const bottomRight = image.data[pixelOffset(image, x1, y1) + channel];
+  const top = topLeft + (topRight - topLeft) * xSample.weight;
+  const bottom = bottomLeft + (bottomRight - bottomLeft) * xSample.weight;
+  return Math.round(top + (bottom - top) * ySample.weight);
+}
+
+function normalizedFramePixels(image, frame, bounds) {
   const width = bounds.maxX - bounds.minX + 1;
   const height = bounds.maxY - bounds.minY + 1;
   const normalized = new Uint8Array(
     NORMALIZED_SIGNATURE_EDGE * NORMALIZED_SIGNATURE_EDGE * 4,
   );
+  const xSamples = normalizedAxisSamples(width);
+  const ySamples = normalizedAxisSamples(height);
   for (let y = 0; y < NORMALIZED_SIGNATURE_EDGE; y += 1) {
-    const sourceY =
-      frame.y +
-      bounds.minY +
-      Math.min(
-        height - 1,
-        Math.floor(((y + 0.5) * height) / NORMALIZED_SIGNATURE_EDGE),
-      );
     for (let x = 0; x < NORMALIZED_SIGNATURE_EDGE; x += 1) {
-      const sourceX =
-        frame.x +
-        bounds.minX +
-        Math.min(
-          width - 1,
-          Math.floor(((x + 0.5) * width) / NORMALIZED_SIGNATURE_EDGE),
-        );
-      const source = pixelOffset(image, sourceX, sourceY);
       const target = (y * NORMALIZED_SIGNATURE_EDGE + x) * 4;
-      normalized.set(image.data.subarray(source, source + 4), target);
+      for (let channel = 0; channel < 4; channel += 1) {
+        normalized[target + channel] = bilinearChannel(
+          image,
+          frame,
+          bounds,
+          xSamples[x],
+          ySamples[y],
+          channel,
+        );
+      }
     }
   }
-  return createHash("sha256").update(normalized).digest("hex");
+  return normalized;
+}
+
+function normalizedMeanDelta(left, right) {
+  let difference = 0;
+  for (let offset = 0; offset < left.length; offset += 4) {
+    const leftAlpha = left[offset + 3];
+    const rightAlpha = right[offset + 3];
+    for (let channel = 0; channel < 3; channel += 1) {
+      const leftPremultiplied = (left[offset + channel] * leftAlpha) / 255;
+      const rightPremultiplied = (right[offset + channel] * rightAlpha) / 255;
+      difference += Math.abs(leftPremultiplied - rightPremultiplied);
+    }
+    difference += Math.abs(leftAlpha - rightAlpha);
+  }
+  return difference / left.length;
+}
+
+function validateScaledDuplicate(normalizedFrames, pixels, frameName) {
+  const match = normalizedFrames.find(
+    ({ pixels: compared }) =>
+      normalizedMeanDelta(pixels, compared) <= MAX_NORMALIZED_MEAN_DELTA,
+  );
+  if (!match) {
+    normalizedFrames.push({ frameName, pixels });
+    return [];
+  }
+  return [
+    issue(
+      "production.frame-scaled-duplicate",
+      `atlas.json.frames.${frameName}`,
+      `帧归一化后与 ${match.frameName} 近似相同，不能用简单缩放冒充逐帧动画`,
+    ),
+  ];
 }
 
 function frameInsideImage(frame, image) {
@@ -469,7 +531,7 @@ function validateFramePixels({
   image,
   frameActions,
   rawSignatures,
-  normalizedSignatures,
+  normalizedFrames,
   frameName,
   frame,
 }) {
@@ -512,15 +574,11 @@ function validateFramePixels({
     ),
   );
 
-  const normalizedSignature = normalizedFrameSignature(image, frame, bounds);
   issues.push(
-    ...validateUniqueSignature(
-      normalizedSignatures,
-      normalizedSignature,
+    ...validateScaledDuplicate(
+      normalizedFrames,
+      normalizedFramePixels(image, frame, bounds),
       frameName,
-      "production.frame-scaled-duplicate",
-      "归一化后",
-      "简单缩放",
     ),
   );
   return issues;
@@ -534,14 +592,14 @@ export function validateProductionPetPixels(manifest, atlas, image) {
     }
   }
   const rawSignatures = new Map();
-  const normalizedSignatures = new Map();
+  const normalizedFrames = [];
   return Object.entries(atlas.frames ?? {}).flatMap(([frameName, frame]) =>
     validateFramePixels({
       manifest,
       image,
       frameActions,
       rawSignatures,
-      normalizedSignatures,
+      normalizedFrames,
       frameName,
       frame,
     }),

@@ -169,6 +169,13 @@ Blocked by: none
   随内容增长而无溢出。按 TDD 小切片修正为显式 `idle_00` 初始帧、仅消费
   声明式 idle 的持续播放并响应安静模式、固定视口高度的纵向滚动容器；6 项
   Chromium E2E 全绿，新增 Retina expected 已人工查看为完整卷尾。
+- 2026-07-31 06:55:21 +0800：重开后的首轮双轴 review 中 Spec 轴无发现，
+  Standards 轴发现原机械校验只以归一化 RGBA 精确哈希拒绝简单缩放，双线性
+  重采样真实 `idle_00` 后会漏检；另有以 `Infinity` 表示持续播放的非阻塞
+  Primitive Obsession 判断项。按 TDD 先加入真实卷卷帧 80% 双线性缩放红灯，
+  再改为双线性归一化后的预乘透明像素平均差检测，正式 86 帧仍无误报；同时
+  新增 `playUntilStopped` 明确 API 消除数值哨兵。相关 21 项窄测试、
+  `pnpm lint:web` 与 `pnpm pet:assets:check` 已转绿，待完整门禁与双轴复审。
 - 2026-07-30：用户明确把正式美术交给 Codex，并确认保留现有身份锚点、重新
   设计原创扁平 2D 风格。规划 Pull Request 合入 `main` 后，本票与
   `Issue 01` 构成首批可领取 frontier。

@@ -56,7 +56,7 @@ function startIdlePlayback(): void {
   idlePlaybackStarted = true;
   const token = ++idlePlaybackToken;
   void renderer
-    .play("idle", Number.POSITIVE_INFINITY)
+    .playUntilStopped("idle")
     .catch(async (error: unknown) => {
       if (token !== idlePlaybackToken) {
         return;

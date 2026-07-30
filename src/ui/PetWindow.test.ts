@@ -13,13 +13,17 @@ type InvokeMock = (
 ) => Promise<unknown>;
 type EmitMock = (event: string, payload?: unknown) => Promise<void>;
 
-const { rendererDestroy, rendererMount, rendererPlay, rendererStop } =
-  vi.hoisted(() => ({
-    rendererDestroy: vi.fn<() => void>(),
-    rendererMount: vi.fn<() => Promise<void>>(() => Promise.resolve()),
-    rendererPlay: vi.fn<() => Promise<void>>(() => Promise.resolve()),
-    rendererStop: vi.fn<() => void>(),
-  }));
+const {
+  rendererDestroy,
+  rendererMount,
+  rendererPlayUntilStopped,
+  rendererStop,
+} = vi.hoisted(() => ({
+  rendererDestroy: vi.fn<() => void>(),
+  rendererMount: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  rendererPlayUntilStopped: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  rendererStop: vi.fn<() => void>(),
+}));
 
 let productStateListener:
   | ((event: {
@@ -59,8 +63,8 @@ vi.mock("./pet-renderer", () => ({
       await rendererMount();
     }
 
-    async play(): Promise<void> {
-      await rendererPlay();
+    async playUntilStopped(): Promise<void> {
+      await rendererPlayUntilStopped();
     }
 
     stop(): void {
@@ -153,8 +157,8 @@ afterEach(() => {
   rendererDestroy.mockReset();
   rendererMount.mockReset();
   rendererMount.mockResolvedValue(undefined);
-  rendererPlay.mockReset();
-  rendererPlay.mockResolvedValue(undefined);
+  rendererPlayUntilStopped.mockReset();
+  rendererPlayUntilStopped.mockResolvedValue(undefined);
   rendererStop.mockReset();
   productStateListener = undefined;
 });
@@ -176,7 +180,7 @@ describe("宠物产品表面", () => {
     expect(wrapper.get("main").attributes("aria-label")).toBe("桌面宠物");
     expect(wrapper.find(".workbench").exists()).toBe(false);
     expect(rendererMount).toHaveBeenCalledOnce();
-    expect(rendererPlay).toHaveBeenCalledOnce();
+    expect(rendererPlayUntilStopped).toHaveBeenCalledOnce();
     expect(emit).toHaveBeenCalledWith(
       "frontend-smoke-status",
       expect.objectContaining({
@@ -279,7 +283,7 @@ describe("宠物产品表面", () => {
     });
     await flushPromises();
 
-    expect(rendererPlay).toHaveBeenCalledTimes(2);
+    expect(rendererPlayUntilStopped).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 });

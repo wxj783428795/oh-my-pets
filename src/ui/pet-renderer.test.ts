@@ -218,6 +218,21 @@ describe("宠物动作播放", () => {
     renderer.destroy();
   });
 
+  it("持续播放循环动作直到显式停止", async () => {
+    vi.useFakeTimers();
+    const renderer = new PetRenderer();
+    await renderer.mount(document.createElement("div"), createPack());
+    renderedFrames.length = 0;
+
+    const playback = renderer.playUntilStopped("repeating");
+    await vi.advanceTimersByTimeAsync(35);
+    expect(renderedFrames).toEqual([0, 1, 0, 1]);
+
+    renderer.stop();
+    await playback;
+    renderer.destroy();
+  });
+
   it("重新挂载前释放旧场景并在加载失败时保持空画布", async () => {
     const renderer = new PetRenderer();
     const host = document.createElement("div");

@@ -72,6 +72,17 @@ export class PetRenderer {
   }
 
   async play(actionName: string, holdMs: number): Promise<void> {
+    await this.playAction(actionName, holdMs);
+  }
+
+  async playUntilStopped(actionName: string): Promise<void> {
+    await this.playAction(actionName, null);
+  }
+
+  private async playAction(
+    actionName: string,
+    holdMs: number | null,
+  ): Promise<void> {
     this.stop();
     const token = this.playToken;
     const action = this.pack?.manifest.actions[actionName];
@@ -99,12 +110,15 @@ export class PetRenderer {
         const isLastFrame = index === action.frames.length - 1;
         if (!action.loop && isLastFrame) {
           const elapsed = performance.now() - startedAt;
-          this.timer = window.setTimeout(finish, Math.max(0, holdMs - elapsed));
+          const remaining =
+            holdMs === null ? frame.durationMs : Math.max(0, holdMs - elapsed);
+          this.timer = window.setTimeout(finish, remaining);
           return;
         }
         index = (index + 1) % action.frames.length;
         const elapsed = performance.now() - startedAt;
-        const shouldContinue = elapsed + frame.durationMs < holdMs;
+        const shouldContinue =
+          holdMs === null || elapsed + frame.durationMs < holdMs;
         if (shouldContinue) {
           this.timer = window.setTimeout(advance, frame.durationMs);
         } else {

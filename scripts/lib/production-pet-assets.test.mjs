@@ -72,6 +72,62 @@ function paintPixel(data, width, x, y, [red, green, blue, alpha]) {
   data.set([red, green, blue, alpha], offset);
 }
 
+function extractFrame(image, frame) {
+  return rgbaImage(frame.w, frame.h, (data) => {
+    for (let y = 0; y < frame.h; y += 1) {
+      const sourceStart = ((frame.y + y) * image.width + frame.x) * 4;
+      data.set(
+        image.data.subarray(sourceStart, sourceStart + frame.w * 4),
+        y * frame.w * 4,
+      );
+    }
+  });
+}
+
+function bilinearResize(image, width, height) {
+  return rgbaImage(width, height, (data) => {
+    for (let y = 0; y < height; y += 1) {
+      const sourceY = Math.max(
+        0,
+        Math.min(image.height - 1, ((y + 0.5) * image.height) / height - 0.5),
+      );
+      const y0 = Math.floor(sourceY);
+      const y1 = Math.min(image.height - 1, y0 + 1);
+      const yWeight = sourceY - y0;
+      for (let x = 0; x < width; x += 1) {
+        const sourceX = Math.max(
+          0,
+          Math.min(image.width - 1, ((x + 0.5) * image.width) / width - 0.5),
+        );
+        const x0 = Math.floor(sourceX);
+        const x1 = Math.min(image.width - 1, x0 + 1);
+        const xWeight = sourceX - x0;
+        const target = (y * width + x) * 4;
+        for (let channel = 0; channel < 4; channel += 1) {
+          const topLeft = image.data[(y0 * image.width + x0) * 4 + channel];
+          const topRight = image.data[(y0 * image.width + x1) * 4 + channel];
+          const bottomLeft = image.data[(y1 * image.width + x0) * 4 + channel];
+          const bottomRight = image.data[(y1 * image.width + x1) * 4 + channel];
+          const top = topLeft + (topRight - topLeft) * xWeight;
+          const bottom = bottomLeft + (bottomRight - bottomLeft) * xWeight;
+          data[target + channel] = Math.round(top + (bottom - top) * yWeight);
+        }
+      }
+    }
+  });
+}
+
+function blit(source, target, offsetX) {
+  for (let y = 0; y < source.height; y += 1) {
+    const sourceStart = y * source.width * 4;
+    const targetStart = (y * target.width + offsetX) * 4;
+    target.data.set(
+      source.data.subarray(sourceStart, sourceStart + source.width * 4),
+      targetStart,
+    );
+  }
+}
+
 describe("正式卷卷资产契约", () => {
   test("接受 accepted spec 对应的 15 动作与 86 个独立帧元数据", () => {
     const { manifest, atlas } = productionFixture();
@@ -151,6 +207,68 @@ describe("正式卷卷资产契约", () => {
     );
   });
 
+  test("拒绝真实卷卷帧经双线性缩小后伪装成新帧", async () => {
+    const packDirectory = resolve("assets/pets/juanjuan");
+    const productionAtlas = JSON.parse(
+      await readFile(resolve(packDirectory, "atlas.json"), "utf8"),
+    );
+    const productionImage = decodeRgbaPng(
+      await readFile(resolve(packDirectory, "atlas.png")),
+    );
+    const original = extractFrame(
+      productionImage,
+      productionAtlas.frames.idle_00,
+    );
+    const scaled = bilinearResize(
+      original,
+      Math.round(original.width * 0.8),
+      Math.round(original.height * 0.8),
+    );
+    const image = rgbaImage(
+      original.width + scaled.width,
+      Math.max(original.height, scaled.height),
+      () => undefined,
+    );
+    blit(original, image, 0);
+    blit(scaled, image, original.width);
+    const baseline = image.height;
+    const manifest = {
+      layout: { baseline: { y: baseline } },
+      actions: {
+        idle: {
+          frames: [
+            { ref: "idle_00", durationMs: 120 },
+            { ref: "idle_01", durationMs: 120 },
+          ],
+        },
+      },
+    };
+    const atlas = {
+      frames: {
+        idle_00: {
+          x: 0,
+          y: 0,
+          w: original.width,
+          h: original.height,
+          offsetX: 0,
+          offsetY: baseline - original.height,
+        },
+        idle_01: {
+          x: original.width,
+          y: 0,
+          w: scaled.width,
+          h: scaled.height,
+          offsetX: 0,
+          offsetY: baseline - scaled.height,
+        },
+      },
+    };
+
+    expect(validateProductionPetPixels(manifest, atlas, image)).toContainEqual(
+      expect.objectContaining({ code: "production.frame-scaled-duplicate" }),
+    );
+  });
+
   test("公开检查入口读取正式图集并接受完整宠物包", async () => {
     const packDirectory = resolve("assets/pets/juanjuan");
     const atlas = JSON.parse(
@@ -164,9 +282,7 @@ describe("正式卷卷资产契约", () => {
       width: atlas.pixelWidth,
       height: atlas.pixelHeight,
     });
-    expect(decoded.data).toHaveLength(
-      atlas.pixelWidth * atlas.pixelHeight * 4,
-    );
+    expect(decoded.data).toHaveLength(atlas.pixelWidth * atlas.pixelHeight * 4);
     await expect(validateProductionPetPack(packDirectory)).resolves.toEqual([]);
   });
 
