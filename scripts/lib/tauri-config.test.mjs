@@ -5,6 +5,14 @@ import { describe, expect, test } from "vitest";
 const configUrl = new URL("../../src-tauri/tauri.conf.json", import.meta.url);
 const infoPlistUrl = new URL("../../src-tauri/Info.plist", import.meta.url);
 const desktopLibUrl = new URL("../../src-tauri/src/lib.rs", import.meta.url);
+const displayRuntimeUrl = new URL(
+  "../../src-tauri/src/display_runtime.rs",
+  import.meta.url,
+);
+const nativePetPositionUrl = new URL(
+  "../../src-tauri/src/native_pet_position.rs",
+  import.meta.url,
+);
 const capabilityUrl = new URL(
   "../../src-tauri/capabilities/default.json",
   import.meta.url,
@@ -77,10 +85,22 @@ describe("macOS 产品窗口拓扑", () => {
     expect(desktopLib).toContain("ADR 0002");
   });
 
-  test("Issue 02 不提前实现多显示器安全区算法且状态发布错误不会被吞掉", async () => {
+  test("多显示器事实只由 Rust 平台适配层读取且状态发布错误不会被吞掉", async () => {
     const desktopLib = await readFile(desktopLibUrl, "utf8");
+    const displayRuntime = await readFile(displayRuntimeUrl, "utf8");
+    const nativePetPosition = await readFile(nativePetPositionUrl, "utf8");
 
-    expect(desktopLib).not.toContain(".available_monitors()");
+    expect(nativePetPosition).toContain(
+      "display_runtime::{capture_display_snapshot, outer_window_size}",
+    );
+    expect(nativePetPosition).toContain(
+      "Result<(PhysicalPoint, MotionStep), String>",
+    );
+    expect(desktopLib).toContain("NativePetPositionController");
+    expect(displayRuntime).toContain(".available_monitors()");
+    expect(displayRuntime).toContain(".cursor_position()");
+    expect(displayRuntime).toContain("monitor.scale_factor()");
+    expect(displayRuntime).toContain("monitor.work_area()");
     expect(desktopLib).not.toMatch(/let _ = refresh_tray_menu/);
     expect(desktopLib).toMatch(
       /fn publish_product_state[\s\S]*Result<\(\), CommandError>/,

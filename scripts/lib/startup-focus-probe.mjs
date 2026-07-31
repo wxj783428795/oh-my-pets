@@ -73,7 +73,7 @@ async function collectEvidence({
   const observedPids = [];
   try {
     const typing = injectKeys();
-    for (const waitMs of [100, 100]) {
+    for (const waitMs of Array.from({ length: 10 }, () => 100)) {
       await delay(waitMs);
       observedPids.push(await frontmostApplicationPid());
     }

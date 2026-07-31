@@ -7,6 +7,7 @@ const contract = JSON.parse(
     "utf8",
   ),
 );
+const minimumFocusPidSamples = 10;
 
 export const AUTOMATED_DESKTOP_CHECKS = Object.freeze(contract.automatedChecks);
 export const MANUAL_DESKTOP_CHECKS = Object.freeze(contract.manualItems);
@@ -39,7 +40,7 @@ export function startupFocusPreserved({
     Number.isInteger(appPid) &&
     beforePid !== appPid &&
     Array.isArray(observedPids) &&
-    observedPids.length > 0 &&
+    observedPids.length >= minimumFocusPidSamples &&
     observedPids.every((pid) => Number.isInteger(pid) && pid === beforePid) &&
     Number.isInteger(typedCount) &&
     Number.isInteger(minimumTypedCount) &&

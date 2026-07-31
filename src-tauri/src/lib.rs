@@ -2,17 +2,20 @@ mod behavior;
 mod desktop_runtime;
 mod desktop_smoke;
 pub mod diagnostics;
+pub mod display_motion;
+mod display_runtime;
 mod login_item;
+mod native_pet_position;
 pub mod pet_pack_store;
 mod preferences_store;
 mod product_state;
-pub mod window_recovery;
 mod window_shell;
 
 use std::{
     path::PathBuf,
     sync::Mutex,
-    time::{SystemTime, UNIX_EPOCH},
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
@@ -20,23 +23,23 @@ use behavior::{BehaviorStep, PreviewBehavior};
 use desktop_runtime::schedule_desktop_smoke;
 use desktop_smoke::requested_report_path;
 use diagnostics::{DiagnosticsPetPack, DiagnosticsSnapshot, write_diagnostics};
+use display_motion::PhysicalPoint;
 use login_item::{LoginItem as _, SystemLoginItem, change_launch_at_login};
+use native_pet_position::NativePetPositionController;
 use oh_my_pets_domain::{
     AtlasManifest, LoadedPetPack, PetManifest, PetPackSummary, ValidationIssue, load_pet_pack,
 };
 use pet_pack_store::PetPackStore;
 use preferences_store::FilePreferencesRepository;
 use product_state::{
-    ActivityFrequency, PetSize, ProductStateController, ProductStateSnapshot, SavedPosition,
-    Velocity,
+    ActivityFrequency, PetSize, ProductStateController, ProductStateSnapshot, Velocity,
 };
 use serde::{Deserialize, Serialize};
 use tauri::{
-    AppHandle, Emitter, Listener, Manager, PhysicalPosition, State, WebviewWindow, WindowEvent,
+    AppHandle, Emitter, Listener, Manager, State, WebviewWindow, WindowEvent,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
-use window_recovery::{WindowSize, WorkArea, recover_position};
 use window_shell::{
     MenuAction, PET_WINDOW_LABEL, configure_pet_collection_behavior, dispatch_tauri_menu,
 };
@@ -139,6 +142,7 @@ impl CommandError {
 struct AppState {
     product: ProductStateController,
     pet_pack: PetPackStore,
+    pet_position: NativePetPositionController,
     behavior: Mutex<PreviewBehavior>,
     frontend_smoke: Mutex<Option<FrontendSmokeStatus>>,
 }
@@ -148,6 +152,7 @@ impl AppState {
         Self {
             product,
             pet_pack: PetPackStore::default(),
+            pet_position: NativePetPositionController::default(),
             behavior: Mutex::new(PreviewBehavior::default()),
             frontend_smoke: Mutex::new(None),
         }
@@ -269,71 +274,55 @@ fn reset_window_position_inner(
     state: &AppState,
 ) -> Result<ProductStateSnapshot, CommandError> {
     let window = pet_window(app)?;
-    let current_monitor = window
-        .current_monitor()
-        .map_err(|error| CommandError::shell(error.to_string()))?;
-    let primary_monitor = if current_monitor.is_none() {
-        window
-            .primary_monitor()
-            .map_err(|error| CommandError::shell(error.to_string()))?
-    } else {
-        None
-    };
-    let window_size = window
-        .outer_size()
-        .map_err(|error| CommandError::shell(error.to_string()))?;
-    let to_work_area = |monitor: &tauri::Monitor| {
-        let area = monitor.work_area();
-        WorkArea {
-            x: area.position.x,
-            y: area.position.y,
-            width: area.size.width,
-            height: area.size.height,
-        }
-    };
-    let position = recover_position(
-        current_monitor.as_ref().map(to_work_area),
-        primary_monitor.as_ref().map(to_work_area),
-        WindowSize {
-            width: window_size.width,
-            height: window_size.height,
-        },
-        24,
-    )
-    .ok_or_else(|| CommandError::shell("无法读取当前或主显示器"))?;
-    window
-        .set_position(PhysicalPosition::new(position.x, position.y))
-        .map_err(|error| CommandError::shell(error.to_string()))?;
+    state
+        .pet_position
+        .recall(&window, &state.product)
+        .map_err(CommandError::shell)?;
     dispatch_window_menu(app, MenuAction::ShowPet)?;
     state
         .product
-        .set_last_valid_position(SavedPosition {
-            x: position.x,
-            y: position.y,
-        })
-        .and_then(|_| state.product.set_pet_hidden(false))
+        .set_pet_hidden(false)
         .map_err(CommandError::shell)
 }
 
 fn restore_window_position(app: &AppHandle, state: &AppState) -> Result<(), CommandError> {
     let window = pet_window(app)?;
-    let saved = state
-        .product
-        .snapshot()
+    if let Some(value) = state
+        .pet_position
+        .restore(&window, &state.product)
         .map_err(CommandError::shell)?
-        .preferences
-        .last_valid_position;
-
-    if let Some(saved) = saved {
-        window
-            .set_position(PhysicalPosition::new(saved.x, saved.y))
-            .map_err(|error| CommandError::shell(error.to_string()))?;
-        return Ok(());
+    {
+        publish_product_state(app, &value)?;
     }
-
-    let value = reset_window_position_inner(app, state)?;
-    publish_product_state(app, &value)?;
     Ok(())
+}
+
+fn schedule_display_reconciliation(app: &AppHandle) {
+    let handle = app.clone();
+    thread::spawn(move || {
+        loop {
+            thread::sleep(Duration::from_secs(1));
+            if handle.get_webview_window(PET_WINDOW_LABEL).is_none() {
+                break;
+            }
+            let state = handle.state::<AppState>();
+            let result = pet_window(&handle).and_then(|window| {
+                state
+                    .pet_position
+                    .reconcile(&window, &state.product)
+                    .map_err(CommandError::shell)
+            });
+            match result {
+                Ok(Some(value)) => {
+                    if let Err(error) = publish_product_state(&handle, &value) {
+                        report_tray_failure(&handle, error);
+                    }
+                }
+                Ok(None) => {}
+                Err(error) => report_tray_failure(&handle, error),
+            }
+        }
+    });
 }
 
 fn reload_example_pet_pack_inner(
@@ -816,10 +805,43 @@ pub fn run() {
                 }
                 WindowEvent::Moved(position) => {
                     let state = window.state::<AppState>();
-                    let _ = state.product.set_last_valid_position(SavedPosition {
-                        x: position.x,
-                        y: position.y,
+                    let result = pet_window(window.app_handle()).and_then(|pet| {
+                        state
+                            .pet_position
+                            .observe_move(
+                                &pet,
+                                &state.product,
+                                PhysicalPoint::new(position.x, position.y),
+                            )
+                            .map_err(CommandError::shell)
                     });
+                    match result {
+                        Ok(Some(value)) => {
+                            if let Err(error) = publish_product_state(window.app_handle(), &value) {
+                                report_tray_failure(window.app_handle(), error);
+                            }
+                        }
+                        Ok(None) => {}
+                        Err(error) => report_tray_failure(window.app_handle(), error),
+                    }
+                }
+                WindowEvent::ScaleFactorChanged { .. } => {
+                    let state = window.state::<AppState>();
+                    let result = pet_window(window.app_handle()).and_then(|pet| {
+                        state
+                            .pet_position
+                            .reconcile(&pet, &state.product)
+                            .map_err(CommandError::shell)
+                    });
+                    match result {
+                        Ok(Some(value)) => {
+                            if let Err(error) = publish_product_state(window.app_handle(), &value) {
+                                report_tray_failure(window.app_handle(), error);
+                            }
+                        }
+                        Ok(None) => {}
+                        Err(error) => report_tray_failure(window.app_handle(), error),
+                    }
                 }
                 _ => {}
             }
@@ -851,6 +873,7 @@ pub fn run() {
             restore_window_position(&handle, app.state::<AppState>().inner())
                 .map_err(|error| error.message)?;
             build_tray(&handle).map_err(|error| error.message)?;
+            schedule_display_reconciliation(&handle);
 
             let state = app.state::<AppState>();
             let _ = reload_example_pet_pack_inner(&handle, state.inner());

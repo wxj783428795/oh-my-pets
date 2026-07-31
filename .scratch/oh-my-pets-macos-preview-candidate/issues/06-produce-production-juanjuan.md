@@ -176,6 +176,13 @@ Blocked by: none
   再改为双线性归一化后的预乘透明像素平均差检测，正式 86 帧仍无误报；同时
   新增 `playUntilStopped` 明确 API 消除数值哨兵。相关 21 项窄测试、
   `pnpm lint:web` 与 `pnpm pet:assets:check` 已转绿，待完整门禁与双轴复审。
+- 2026-07-31 22:42:20 +0800：用户指出上游分支冲突后重新 fetch，确认
+  `origin/integration/macos-preview-candidate` 已通过 PR #12 推进到
+  `c1376b85c42701059707840e20f0d62ba5d8665f`。本分支只合入该正式 integration
+  提交，没有读取或修改 Issue 03 的独立 worktree，也没有直接合并或拣选兄弟
+  topic 分支。唯一内容冲突位于 `docs/agents/delivery-readiness.md`：保留
+  Issue 03 的真实原生运动／显示器 QA，并同时保留本票正式卷卷 15 动作、三档
+  尺寸和透明边缘人工验收；桌面 smoke 仍不得替代内容资源验收。
 - 2026-07-30：用户明确把正式美术交给 Codex，并确认保留现有身份锚点、重新
   设计原创扁平 2D 风格。规划 Pull Request 合入 `main` 后，本票与
   `Issue 01` 构成首批可领取 frontier。
