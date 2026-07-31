@@ -2,7 +2,7 @@
 
 Type: task
 Kind: feature
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: 02
 
@@ -108,6 +108,10 @@ Blocked by: 02
   交付路由，不改写 `main`；风险是流程资产曾表达错误 target。补救为从
   `main@6f06cc7` 建立受保护 integration、治理 PR 完整门禁、逐票 closeout 和
   最终全规格 review。
+- 2026-07-31：已创建 Ready Pull Request #12（`codex/macos-preview-candidate-03-display-motion`
+  → `integration/macos-preview-candidate`）；最新 integration 上的 required
+  `macOS ARM64 最终验证` 与 GitGuardian 检查均通过，满足本票关闭门槛。按流程仅
+  记录 PR 和远端门禁，不在本票中直接合并。
 
 ## Closeout Evidence
 
@@ -151,5 +155,6 @@ Blocked by: 02
 宠物放到鼠标所在显示器的安全角落，位置更新不抢焦点且不创建第二实例。自动与人工
 桌面证据、双轴 review 和最终 `pnpm verify` 均已通过。双屏人工操作受当前设备只有
 一块物理显示器限制，已由确定性模拟覆盖并如实记录；拖拽抛掷与随机行为仍分别属于
-Issue 04、Issue 05。本票待创建指向 `integration/macos-preview-candidate` 的 Ready
-Pull Request 并通过最新 integration 的 `macOS ARM64 最终验证` 后关闭。
+Issue 04、Issue 05。本票已创建指向 `integration/macos-preview-candidate` 的 Ready
+Pull Request #12，并通过最新 integration 的 `macOS ARM64 最终验证` 与 GitGuardian
+检查，已满足关闭门槛。PR 的合并仍由 integration 维护流程单独执行。
