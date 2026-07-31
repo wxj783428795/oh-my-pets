@@ -29,7 +29,7 @@ function validReport() {
     startupFocus: {
       beforePid: 100,
       appPid: 200,
-      observedPids: [100, 100],
+      observedPids: Array.from({ length: 10 }, () => 100),
       typedCount: 100,
       minimumTypedCount: 100,
       preserved: true,
@@ -72,7 +72,7 @@ describe("桌面 smoke 报告", () => {
       startupFocusPreserved({
         beforePid: 100,
         appPid: 200,
-        observedPids: [100, 200],
+        observedPids: [...Array.from({ length: 9 }, () => 100), 200],
         typedCount: 100,
         minimumTypedCount: 100,
       }),
@@ -81,7 +81,7 @@ describe("桌面 smoke 报告", () => {
       startupFocusPreserved({
         beforePid: 100,
         appPid: 200,
-        observedPids: [100, 300],
+        observedPids: [...Array.from({ length: 9 }, () => 100), 300],
         typedCount: 100,
         minimumTypedCount: 100,
       }),
@@ -90,7 +90,7 @@ describe("桌面 smoke 报告", () => {
       startupFocusPreserved({
         beforePid: 100,
         appPid: 200,
-        observedPids: [100, 100],
+        observedPids: Array.from({ length: 10 }, () => 100),
         typedCount: 100,
         minimumTypedCount: 100,
       }),
@@ -102,8 +102,20 @@ describe("桌面 smoke 报告", () => {
       startupFocusPreserved({
         beforePid: 100,
         appPid: 200,
-        observedPids: [100, 100],
+        observedPids: Array.from({ length: 10 }, () => 100),
         typedCount: 42,
+        minimumTypedCount: 100,
+      }),
+    ).toBe(false);
+  });
+
+  test("前台 PID 采样过短、未覆盖原生位置检查时拒绝报告", () => {
+    expect(
+      startupFocusPreserved({
+        beforePid: 100,
+        appPid: 200,
+        observedPids: [100, 100],
+        typedCount: 100,
         minimumTypedCount: 100,
       }),
     ).toBe(false);
@@ -202,6 +214,18 @@ describe("桌面 smoke 报告", () => {
   test("人工验收保留点击穿透的物理体验检查", () => {
     expect(MANUAL_DESKTOP_CHECKS).toContain(
       "确认开启点击穿透后桌面目标可被物理点击，并能从菜单栏关闭穿透",
+    );
+  });
+
+  test("人工验收覆盖真实原生移动、鼠标屏召回和显示器生命周期", () => {
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认召回或受控位置更新会移动真实宠物窗口，不抢焦点、不激活当前应用，也不会出现第二个宠物实例",
+    );
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认召回会把宠物放到鼠标所在显示器的安全角；有双显示器时覆盖至少一种排列，只有单屏时记录单屏实测与确定性模拟证据，不伪造双屏人工通过",
+    );
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认断开显示器或改变分辨率、缩放与排列后宠物仍完全可见，并能继续保存和召回",
     );
   });
 
