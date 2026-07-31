@@ -47,7 +47,9 @@ final class FocusProbeDelegate: NSObject, NSApplicationDelegate {
                 attributes: nil
             )
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+        // PID 采样会跨越应用启动、原生位置更新和召回；给多次 osascript 查询
+        // 留出足够时间，避免探针自身先退出而把焦点还给其他应用。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8.0) {
             let count = self.input?.stringValue.count ?? 0
             do {
                 try "\(count)\n".write(

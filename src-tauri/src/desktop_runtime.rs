@@ -1,7 +1,13 @@
 use super::*;
 use std::{fs, path::PathBuf, thread, time::Duration};
 
-use crate::{desktop_smoke::DesktopSmokeReport, window_shell::PREFERENCES_WINDOW_LABEL};
+use crate::{
+    desktop_smoke::DesktopSmokeReport,
+    display_motion::{LogicalVelocity, recall_placement},
+    display_runtime::{capture_display_snapshot, outer_window_size},
+    native_pet_position::PET_SAFE_MARGIN,
+    window_shell::PREFERENCES_WINDOW_LABEL,
+};
 
 fn wait_for_window(app: &AppHandle, label: &str, timeout: Duration) -> Option<WebviewWindow> {
     let deadline = std::time::Instant::now() + timeout;
@@ -88,6 +94,73 @@ fn record_product_state_startup(
     }
 }
 
+fn verify_native_window_motion_and_recall(
+    app: &AppHandle,
+    state: &AppState,
+) -> Result<String, CommandError> {
+    let window = pet_window(app)?;
+    let displays = capture_display_snapshot(&window).map_err(CommandError::shell)?;
+    let window_size = outer_window_size(&window).map_err(CommandError::shell)?;
+    let expected_recall = recall_placement(&displays, window_size, PET_SAFE_MARGIN)
+        .ok_or_else(|| CommandError::shell("无法计算鼠标所在显示器的召回位置"))?;
+
+    handle_tray_menu(app, MENU_RECALL_PET)?;
+    thread::sleep(Duration::from_millis(100));
+    let recalled = window
+        .outer_position()
+        .map_err(|error| CommandError::shell(error.to_string()))?;
+    if recalled.x != expected_recall.position.x || recalled.y != expected_recall.position.y {
+        return Err(CommandError::shell(format!(
+            "召回位置不在鼠标显示器安全角：实际=({}, {})，期望=({}, {})",
+            recalled.x, recalled.y, expected_recall.position.x, expected_recall.position.y
+        )));
+    }
+
+    let (before, step) = state
+        .pet_position
+        .advance(
+            &window,
+            &state.product,
+            LogicalVelocity::new(-80.0, 0.0),
+            Duration::from_millis(500),
+            true,
+        )
+        .map_err(CommandError::shell)?;
+    let expected_after = step.placement.position;
+    thread::sleep(Duration::from_millis(100));
+    let moved = window
+        .outer_position()
+        .map_err(|error| CommandError::shell(error.to_string()))?;
+    let actual_after = PhysicalPoint::new(moved.x, moved.y);
+    if actual_after != expected_after || actual_after == before {
+        return Err(CommandError::shell(format!(
+            "原生窗口坐标未按 Rust 运动模型变化：起点={before:?}，模型={expected_after:?}，实际={actual_after:?}"
+        )));
+    }
+    if window
+        .is_focused()
+        .map_err(|error| CommandError::shell(error.to_string()))?
+    {
+        return Err(CommandError::shell("普通位置更新后宠物窗口意外获得焦点"));
+    }
+    let pet_instances = app
+        .webview_windows()
+        .keys()
+        .filter(|label| label.as_str() == PET_WINDOW_LABEL)
+        .count();
+    if pet_instances != 1 {
+        return Err(CommandError::shell(format!(
+            "位置更新后宠物窗口实例数异常：{pet_instances}"
+        )));
+    }
+
+    handle_tray_menu(app, MENU_RECALL_PET)?;
+    Ok(format!(
+        "原生窗口从 ({}, {}) 移动到 ({}, {})，随后召回鼠标显示器安全角；未聚焦且仅有一个 pet 实例",
+        before.x, before.y, actual_after.x, actual_after.y
+    ))
+}
+
 fn run_desktop_smoke(app: &AppHandle) -> DesktopSmokeReport {
     let mut report = DesktopSmokeReport::new(app.package_info().version.to_string());
 
@@ -143,6 +216,10 @@ fn run_desktop_smoke(app: &AppHandle) -> DesktopSmokeReport {
     }
 
     let state = app.state::<AppState>();
+    match verify_native_window_motion_and_recall(app, state.inner()) {
+        Ok(detail) => report.pass("native_window_motion_and_display_recall", detail),
+        Err(error) => report.fail("native_window_motion_and_display_recall", error.message),
+    }
     record_product_state_startup(&mut report, app, state.inner());
 
     match current_pet_pack_inner(state.inner()) {

@@ -58,7 +58,7 @@ describe("架构反馈", () => {
       "src/ui/env.d.ts",
       "src/ui/browser-test-platform.ts",
       "scripts/lib/doctor.test.mjs",
-      "src-tauri/tests/window_recovery.rs",
+      "src-tauri/tests/display_motion.rs",
       "research/experiment.ts",
       "reference/vendor.ts",
       ".scratch/demo/prototypes/shell.ts",
@@ -248,80 +248,84 @@ describe("架构反馈", () => {
     ).toThrow("oxlint 分析失败：unknown rule import/no-cycle");
   });
 
-  test("真实 Oxlint 与 Clippy 会阻断高复杂函数和循环 import", async () => {
-    const fixtureRoot = await mkdtemp(
-      join(tmpdir(), "oh-my-pets-architecture-"),
-    );
-    const writeFixture = async (path, source) => {
-      const absolutePath = join(fixtureRoot, path);
-      await mkdir(dirname(absolutePath), { recursive: true });
-      await writeFile(absolutePath, source);
-    };
+  test(
+    "真实 Oxlint 与 Clippy 会阻断高复杂函数和循环 import",
+    async () => {
+      const fixtureRoot = await mkdtemp(
+        join(tmpdir(), "oh-my-pets-architecture-"),
+      );
+      const writeFixture = async (path, source) => {
+        const absolutePath = join(fixtureRoot, path);
+        await mkdir(dirname(absolutePath), { recursive: true });
+        await writeFile(absolutePath, source);
+      };
 
-    try {
-      await writeFixture(
-        ".oxlintrc.json",
-        await readFile(
-          new URL("../../.oxlintrc.json", import.meta.url),
-          "utf8",
-        ),
-      );
-      const branches = Array.from(
-        { length: 21 },
-        (_, index) => `  if (values[${index}]) total += 1;`,
-      ).join("\n");
-      await writeFixture(
-        "scripts/a.mjs",
-        `import "./b.mjs";\nexport function complex(values) {\n  let total = 0;\n${branches}\n  return total;\n}\n`,
-      );
-      await writeFixture("scripts/b.mjs", 'import "./a.mjs";\n');
+      try {
+        await writeFixture(
+          ".oxlintrc.json",
+          await readFile(
+            new URL("../../.oxlintrc.json", import.meta.url),
+            "utf8",
+          ),
+        );
+        const branches = Array.from(
+          { length: 21 },
+          (_, index) => `  if (values[${index}]) total += 1;`,
+        ).join("\n");
+        await writeFixture(
+          "scripts/a.mjs",
+          `import "./b.mjs";\nexport function complex(values) {\n  let total = 0;\n${branches}\n  return total;\n}\n`,
+        );
+        await writeFixture("scripts/b.mjs", 'import "./a.mjs";\n');
 
-      const oxlint = spawnSync(process.execPath, [oxlintCli, "."], {
-        cwd: fixtureRoot,
-        encoding: "utf8",
-      });
-      const oxlintOutput = `${oxlint.stdout}\n${oxlint.stderr}`;
-      expect(oxlint.status).not.toBe(0);
-      expect(oxlintOutput).toContain("eslint(complexity)");
-      expect(oxlintOutput).toContain("import(no-cycle)");
-
-      await writeFixture(
-        "Cargo.toml",
-        '[package]\nname = "architecture-fixture"\nversion = "0.0.0"\nedition = "2024"\n',
-      );
-      const rustBranches = Array.from(
-        { length: 30 },
-        (_, index) => `    if values[${index}] { total += 1; }`,
-      ).join("\n");
-      await writeFixture(
-        "src/lib.rs",
-        `pub fn complex(values: &[bool; 30]) -> usize {\n    let mut total = 0;\n${rustBranches}\n    total\n}\n`,
-      );
-      const clippy = spawnSync(
-        "cargo",
-        [
-          "clippy",
-          "--offline",
-          "--manifest-path",
-          join(fixtureRoot, "Cargo.toml"),
-          "--",
-          "-D",
-          "warnings",
-          "-D",
-          "clippy::cognitive_complexity",
-        ],
-        {
+        const oxlint = spawnSync(process.execPath, [oxlintCli, "."], {
           cwd: fixtureRoot,
           encoding: "utf8",
-        },
-      );
-      const clippyOutput = `${clippy.stdout}\n${clippy.stderr}`;
-      expect(clippy.status).not.toBe(0);
-      expect(clippyOutput).toContain("cognitive-complexity");
-    } finally {
-      await rm(fixtureRoot, { recursive: true, force: true });
-    }
-  });
+        });
+        const oxlintOutput = `${oxlint.stdout}\n${oxlint.stderr}`;
+        expect(oxlint.status).not.toBe(0);
+        expect(oxlintOutput).toContain("eslint(complexity)");
+        expect(oxlintOutput).toContain("import(no-cycle)");
+
+        await writeFixture(
+          "Cargo.toml",
+          '[package]\nname = "architecture-fixture"\nversion = "0.0.0"\nedition = "2024"\n',
+        );
+        const rustBranches = Array.from(
+          { length: 30 },
+          (_, index) => `    if values[${index}] { total += 1; }`,
+        ).join("\n");
+        await writeFixture(
+          "src/lib.rs",
+          `pub fn complex(values: &[bool; 30]) -> usize {\n    let mut total = 0;\n${rustBranches}\n    total\n}\n`,
+        );
+        const clippy = spawnSync(
+          "cargo",
+          [
+            "clippy",
+            "--offline",
+            "--manifest-path",
+            join(fixtureRoot, "Cargo.toml"),
+            "--",
+            "-D",
+            "warnings",
+            "-D",
+            "clippy::cognitive_complexity",
+          ],
+          {
+            cwd: fixtureRoot,
+            encoding: "utf8",
+          },
+        );
+        const clippyOutput = `${clippy.stdout}\n${clippy.stderr}`;
+        expect(clippy.status).not.toBe(0);
+        expect(clippyOutput).toContain("cognitive-complexity");
+      } finally {
+        await rm(fixtureRoot, { recursive: true, force: true });
+      }
+    },
+    15_000,
+  );
 
   test("根命令、Oxlint 规则、报告目录和 verify 接线稳定", async () => {
     const [packageSource, oxlintSource, architectureScript] = await Promise.all(
