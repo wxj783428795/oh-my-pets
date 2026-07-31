@@ -115,28 +115,41 @@ Blocked by: 02
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: 2026-07-31 CST：scope／architecture 检查通过（48 个模块、9604 LOC、无循环依赖）；27 个 Rust 单元测试、147 个 Web／工程测试、2 个 Chromium E2E、lint、WebView 构建、真实 Tauri release 构建及 closeout 扫描全部通过。architecture 真实夹具在全套并发下曾稳定约 6 秒，timeout 调整为 15 秒以消除门禁抖动，未放宽断言。
 
 ### Manual QA
 
-- Status: pending
+- Status: passed
 - Command: `pnpm qa:desktop`
-- Result: pending
-- Reason:
+- Result: 2026-07-31 CST：最终人工 QA 报告
+  `target/desktop-smoke/manual-qa.json` 为 `passed: true`，13/13 项通过；应用在计划重启和退出前持续运行并干净结束。自动 smoke 报告
+  `target/desktop-smoke/report.json` 记录原生窗口从 `(2276, 1110)` 移动到
+  `(2196, 1110)` 后召回，未聚焦且仅一个 `pet` 实例；焦点探针 10/10 次 PID
+  保持不变，连续输入 169/100。当前仅 1 块物理显示器，已实际完成
+  `1470×956 → 1710×1112 → 1470×956` 缩放实测并截图确认宠物全程可见；双屏、
+  断屏、负坐标、上下排列和混合缩放由确定性 Rust 模拟覆盖，未伪记双屏人工通过。
+- Reason: 首次人工 QA 因显示缩放实测期间系统设置改变重启前台基准而被脚本拒绝；关闭系统设置后重新运行并通过，失败尝试未计入通过证据。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: passed
+- Notes: 2026-07-31 CST：最终 Standards + Spec 双轴复审无阻塞发现。Standards 仅记录
+  `lib.rs` 三处事件结果发布分支重复的非阻塞判断，本票不扩大重构；TDD 红绿证据、
+  首轮四项阻塞修复及最终验证均已记录在本票 Comments。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: `4684c26f80779c3daea405b864b4529112bce3f5`
 
 ## Answer
 
-待实施。
+已完成原生宠物窗口的运动积分、边界反弹、显示器选择与断屏／缩放恢复；召回会将
+宠物放到鼠标所在显示器的安全角落，位置更新不抢焦点且不创建第二实例。自动与人工
+桌面证据、双轴 review 和最终 `pnpm verify` 均已通过。双屏人工操作受当前设备只有
+一块物理显示器限制，已由确定性模拟覆盖并如实记录；拖拽抛掷与随机行为仍分别属于
+Issue 04、Issue 05。本票待创建指向 `integration/macos-preview-candidate` 的 Ready
+Pull Request 并通过最新 integration 的 `macOS ARM64 最终验证` 后关闭。
