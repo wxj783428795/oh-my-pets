@@ -233,6 +233,14 @@ Blocked by: none
   Rust 测试、24 项相关前端测试与完整 lint 已转绿；因这些是 review 后相关改动，
   双轴复核确认原发现均已关闭且无新增阻塞；提交前仍须在当前最终工作树重跑
   `pnpm verify`，未全绿不得完成合并提交。
+- 2026-08-04 13:20:39 CST：在合并提交 `28f6628` 的当前源码上真实运行
+  `pnpm qa:desktop:auto`，13/13 项全部通过，源码指纹为
+  `f0d4c281182665cd678be888e0bdf7e07fc9385ef5d812416a26a1c2bb4753ee`。
+  其中正式卷卷读回 15 动作／86 帧；真实点击、拖拽、抛掷、落地和文件投喂
+  通过且首帧响应 2ms；点击穿透取消动作已确认到达 Pixi `idle` 首帧；原生
+  NSPanel、窗口运动、偏好恢复、登录项、菜单状态、诊断与不抢焦点均通过。
+  此次前台环境不再被 ToDesk 占用，旧阻塞已解除；自动 smoke 仍不替代
+  `pnpm qa:desktop` 的真实视觉、三档尺寸与逐项用户人工确认。
 - 2026-07-31 23:43:27 +0800：本轮最终 Standards 轴无阻塞项，Spec 轴为
   `pass-with-closeout-pending`。Standards 的唯一非阻塞发现是损坏清单把循环动作
   标为 `loop: true` 却漏掉 `frames` 时，连续性像素校验会抛 `TypeError`；按
@@ -263,22 +271,28 @@ Blocked by: none
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: 用户复查后重开，待最后相关修复完成后重跑。
+- Result: 2026-08-04 CST：最终相关源码上，正式卷卷 15 动作／86 帧机械校验、
+  81 个 Rust 测试、176 个 Web／工程测试、6 个 Chromium E2E、架构与范围、
+  lint、WebView、真实 Tauri release 构建及 closeout 扫描全部通过；随后真实
+  `pnpm qa:desktop:auto` 13/13 项通过。
 
 ### Manual QA
 
 - Status: pending
 - Command: `pnpm qa:desktop`
-- Result: 用户复查后重开，待 Computer Use 与真实桌面 QA 重新验证三项缺陷。
-- Reason:
+- Result: 自动桌面 smoke 已在最终源码上通过；正式交互式人工清单仍待用户逐项
+  确认，不能用自动结果代替。
+- Reason: 待真实 `.app` 三档尺寸、15 个动作、透明合成与最终退出人工验收。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: 用户复查后重开，待新增修复完成后重新执行双轴 review。
+- Standards: passed
+- Spec: passed
+- Notes: 上游合并首轮各发现一个交汇阻塞；按 TDD 修复 `idle` 首帧回执和正式
+  动作声明时长后复核均通过，无新增 hard violation、smell、规格缺失或 Issue 05
+  自主调度 scope creep。人工 closeout pending 不伪装成代码通过。
 
 ### Commit
 
