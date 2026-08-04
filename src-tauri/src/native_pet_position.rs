@@ -19,6 +19,60 @@ pub struct NativePetPositionController {
 }
 
 impl NativePetPositionController {
+    pub fn drag_to(
+        &self,
+        window: &WebviewWindow,
+        product: &ProductStateController,
+        position: PhysicalPoint,
+    ) -> Result<PhysicalPoint, String> {
+        let displays = capture_display_snapshot(window)?;
+        let window_size = outer_window_size(window)?;
+        let current = self
+            .placement
+            .lock()
+            .map_err(|_| "宠物位置状态锁已损坏".to_string())?
+            .clone()
+            .ok_or_else(|| "宠物位置尚未初始化".to_string())?;
+        let placement = adopt_external_position(
+            &displays,
+            current.clone(),
+            position,
+            window_size,
+            PET_SAFE_MARGIN,
+        )
+        .or_else(|| {
+            reconcile_placement(
+                &displays,
+                PetPlacement {
+                    display_id: current.display_id,
+                    position,
+                },
+                window_size,
+                PET_SAFE_MARGIN,
+            )
+        })
+        .ok_or_else(|| "拖拽位置不在任何可用显示器安全区域内".to_string())?;
+        let applied = placement.position;
+        self.apply(window, product, placement, false)?;
+        Ok(applied)
+    }
+
+    pub fn persist_current(
+        &self,
+        product: &ProductStateController,
+    ) -> Result<ProductStateSnapshot, String> {
+        let placement = self
+            .placement
+            .lock()
+            .map_err(|_| "宠物位置状态锁已损坏".to_string())?
+            .clone()
+            .ok_or_else(|| "宠物位置尚未初始化".to_string())?;
+        product.set_last_valid_position(SavedPosition {
+            x: placement.position.x,
+            y: placement.position.y,
+        })
+    }
+
     pub fn recall(
         &self,
         window: &WebviewWindow,

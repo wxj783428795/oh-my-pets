@@ -3,6 +3,20 @@ export type Size = {
   height: number;
 };
 
+export type Point = {
+  x: number;
+  y: number;
+};
+
+export type Rect = Point & Size;
+
+export type PetLayout = {
+  baseline: Point;
+  hitbox: Rect;
+  dropZone: Rect;
+  bubbleAnchor: Point;
+};
+
 export type AtlasFrame = {
   x: number;
   y: number;
@@ -33,6 +47,7 @@ export type PetManifest = {
   displayName: string;
   description: string;
   canvas: Size;
+  layout: PetLayout;
   actions: Record<string, PetAction>;
 };
 
@@ -109,6 +124,15 @@ export type BehaviorStep = {
   action: string;
   reason: string;
   holdMs: number;
+};
+
+export type InteractionPayload = {
+  kind: "ignored" | "captured" | "action" | "dragging" | "throw";
+  captureId?: number;
+  revision?: number;
+  action?: string;
+  holdMs?: number;
+  completeOnFinish?: boolean;
 };
 
 export type CommandError = {

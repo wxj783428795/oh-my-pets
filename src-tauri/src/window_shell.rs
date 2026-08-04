@@ -199,6 +199,13 @@ fn pet_collection_behavior(
 }
 
 #[cfg(target_os = "macos")]
+pub(crate) fn pet_panel_style_mask(
+    current: objc2_app_kit::NSWindowStyleMask,
+) -> objc2_app_kit::NSWindowStyleMask {
+    current | objc2_app_kit::NSWindowStyleMask::NonactivatingPanel
+}
+
+#[cfg(target_os = "macos")]
 pub fn configure_pet_collection_behavior(window: &WebviewWindow) -> tauri::Result<()> {
     use objc2_app_kit::NSWindow;
 
@@ -402,5 +409,16 @@ mod tests {
         assert!(behavior.contains(NSWindowCollectionBehavior::CanJoinAllApplications));
         assert!(!behavior.contains(NSWindowCollectionBehavior::Auxiliary));
         assert!(!behavior.contains(NSWindowCollectionBehavior::Primary));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn pet_panel_preserves_its_frame_style_and_does_not_activate_the_app() {
+        use objc2_app_kit::NSWindowStyleMask;
+
+        let style = super::pet_panel_style_mask(NSWindowStyleMask::Borderless);
+
+        assert!(style.contains(NSWindowStyleMask::Borderless));
+        assert!(style.contains(NSWindowStyleMask::NonactivatingPanel));
     }
 }

@@ -3,6 +3,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { finishProbedProcess } from "./lib/desktop-qa.mjs";
 import { startMacosStartupFocusProbe } from "./lib/startup-focus-probe.mjs";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
@@ -38,8 +39,11 @@ const { evidence, target } = await startMacosStartupFocusProbe({
 });
 
 try {
-  const result = await evidence;
+  const result = target
+    ? await finishProbedProcess({ evidence, target })
+    : await evidence;
   const preserved =
+    result.firstResponderPreserved &&
     result.typedCount >= result.minimumTypedCount &&
     result.observedPids.every((pid) => pid === result.beforePid);
   console.log(JSON.stringify({ ...result, baselineOnly, preserved }, null, 2));

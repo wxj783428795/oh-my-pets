@@ -2,9 +2,12 @@ mod behavior;
 mod desktop_runtime;
 mod desktop_smoke;
 pub mod diagnostics;
+pub mod direct_interaction;
+mod direct_interaction_runtime;
 pub mod display_motion;
 mod display_runtime;
 mod login_item;
+mod native_pet_panel;
 mod native_pet_position;
 pub mod pet_pack_store;
 mod preferences_store;
@@ -23,6 +26,8 @@ use behavior::{BehaviorStep, PreviewBehavior};
 use desktop_runtime::schedule_desktop_smoke;
 use desktop_smoke::requested_report_path;
 use diagnostics::{DiagnosticsPetPack, DiagnosticsSnapshot, write_diagnostics};
+use direct_interaction::DirectInteraction;
+use direct_interaction_runtime::{InteractionPayload, PointerRequest};
 use display_motion::PhysicalPoint;
 use login_item::{LoginItem as _, SystemLoginItem, change_launch_at_login};
 use native_pet_position::NativePetPositionController;
@@ -143,6 +148,8 @@ struct AppState {
     product: ProductStateController,
     pet_pack: PetPackStore,
     pet_position: NativePetPositionController,
+    pet_panel_contract: Mutex<native_pet_panel::PetPanelContract>,
+    interaction: Mutex<DirectInteraction>,
     behavior: Mutex<PreviewBehavior>,
     frontend_smoke: Mutex<Option<FrontendSmokeStatus>>,
 }
@@ -153,6 +160,8 @@ impl AppState {
             product,
             pet_pack: PetPackStore::default(),
             pet_position: NativePetPositionController::default(),
+            pet_panel_contract: Mutex::new(native_pet_panel::PetPanelContract::default()),
+            interaction: Mutex::new(DirectInteraction::default()),
             behavior: Mutex::new(PreviewBehavior::default()),
             frontend_smoke: Mutex::new(None),
         }
@@ -227,6 +236,16 @@ fn set_click_through_inner(
     window
         .set_ignore_cursor_events(enabled)
         .map_err(|error| CommandError::shell(error.to_string()))?;
+    if enabled && let Err(error) = direct_interaction_runtime::cancel_all(app, state) {
+        let rollback = window.set_ignore_cursor_events(previous);
+        return Err(CommandError::shell(match rollback {
+            Ok(()) => error.message,
+            Err(rollback_error) => format!(
+                "{}；恢复原窗口鼠标穿透状态失败：{rollback_error}",
+                error.message
+            ),
+        }));
+    }
     let product = match state.product.set_click_through(enabled) {
         Ok(product) => product,
         Err(error) => {
@@ -614,6 +633,63 @@ fn trigger_preview_action(
 }
 
 #[tauri::command]
+fn begin_pet_pointer(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    pointer: PointerRequest,
+) -> Result<InteractionPayload, CommandError> {
+    direct_interaction_runtime::begin_pointer(&app, state.inner(), pointer)
+}
+
+#[tauri::command]
+fn update_pet_pointer(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    capture_id: u64,
+    pointer: PointerRequest,
+) -> Result<InteractionPayload, CommandError> {
+    direct_interaction_runtime::update_pointer(&app, state.inner(), capture_id, pointer)
+}
+
+#[tauri::command]
+fn end_pet_pointer(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    capture_id: u64,
+    pointer: PointerRequest,
+) -> Result<InteractionPayload, CommandError> {
+    direct_interaction_runtime::end_pointer(&app, state.inner(), capture_id, pointer)
+}
+
+#[tauri::command]
+fn handle_pet_file_drop(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    paths: Vec<PathBuf>,
+    pointer: PointerRequest,
+) -> Result<InteractionPayload, CommandError> {
+    direct_interaction_runtime::handle_file_drop(&app, state.inner(), paths, pointer)
+}
+
+#[tauri::command]
+fn complete_pet_action(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    revision: u64,
+) -> Result<InteractionPayload, CommandError> {
+    direct_interaction_runtime::complete_action(&app, state.inner(), revision)
+}
+
+#[tauri::command]
+fn cancel_pet_pointer(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    capture_id: u64,
+) -> Result<InteractionPayload, CommandError> {
+    direct_interaction_runtime::cancel_pointer(&app, state.inner(), capture_id)
+}
+
+#[tauri::command]
 fn export_diagnostics(app: AppHandle, state: State<'_, AppState>) -> Result<String, CommandError> {
     export_diagnostics_inner(&app, state.inner()).map(|path| path.display().to_string())
 }
@@ -779,6 +855,8 @@ fn build_tray(app: &AppHandle) -> Result<(), CommandError> {
 pub fn run() {
     let builder = tauri::Builder::default();
     #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_nspanel::init());
+    #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_plugin_autostart::init(
         tauri_plugin_autostart::MacosLauncher::LaunchAgent,
         None,
@@ -867,6 +945,11 @@ pub fn run() {
                 }
             });
             let window = pet_window(&handle).map_err(|error| error.message)?;
+            let panel_contract = native_pet_panel::configure_pet_panel(&window)?;
+            *app.state::<AppState>()
+                .pet_panel_contract
+                .lock()
+                .map_err(|_| "宠物原生面板契约状态锁已损坏")? = panel_contract;
             window.set_always_on_top(true)?;
             window.set_visible_on_all_workspaces(true)?;
             configure_pet_collection_behavior(&window)?;
@@ -901,6 +984,12 @@ pub fn run() {
             reload_example_pet_pack,
             next_preview_action,
             trigger_preview_action,
+            begin_pet_pointer,
+            update_pet_pointer,
+            end_pet_pointer,
+            handle_pet_file_drop,
+            complete_pet_action,
+            cancel_pet_pointer,
             export_diagnostics
         ]);
     let mut app = builder

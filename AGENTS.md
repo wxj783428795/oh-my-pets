@@ -38,10 +38,12 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 - `pnpm verify`：在 `verify:core` 后执行真实 Tauri 桌面构建与 resolved ticket 关闭证据扫描，是最终改动后的统一关闭检查。
 - `pnpm build` / `pnpm build:desktop`：调用真实 Tauri 构建；正式发布打包仍不在 macOS 预览版当前范围内。
 - `pnpm build:desktop:qa`：仅为真实 macOS 人工 QA 构建带品牌图标的本地 `.app`，不等价于正式发布打包。
-- `pnpm qa:desktop:auto`：构建并启动真实 Tauri 可执行文件，使用
-  自有 AppKit 临时输入控件验证启动期间的前台 PID 与连续按键均保持，使用
-  `target/desktop-smoke/preferences.json` 隔离偏好，并执行可自动化的最小桌面
-  smoke；不会借用或修改用户已打开的编辑器文档。
+- `pnpm qa:desktop:auto`：构建真实 Tauri 可执行文件，先在自有 AppKit 临时输入
+  控件下单独启动一次，验证启动期间的前台 PID、连续按键与 first responder 均
+  保持；清理该进程后再独立启动一次执行可自动化的最小桌面 smoke，避免偏好设置
+  等显式聚焦检查污染启动证据。两次启动均使用
+  `target/desktop-smoke/preferences.json` 隔离偏好，不会借用或修改用户已打开的
+  编辑器文档。
 - `pnpm qa:desktop:focus`：构建带图标的真实 macOS `.app`，只运行启动焦点连续
   输入回归探针；用于 Tauri、TAO 或 macOS 生命周期变更后的窄反馈。
 - `pnpm qa:desktop`：复用最近一次已通过且桌面源码指纹与当前工作树一致的自动

@@ -111,12 +111,13 @@ pnpm build:desktop
 其他应用的文本框停止接收键盘输入，即使 System Events 看到的前台 PID 始终未变，
 也按抢焦点缺陷处理。不要只增加前台 PID 采样次数后宣布通过。
 
-先用真实 QA 构建复现，并同时保留两类证据：启动前后的前台 PID，以及启动期间
-持续发送到独立临时输入控件的按键数量。探针必须拥有自己的临时控件和输出，不能
-借用或修改用户已经打开的 TextEdit、编辑器或浏览器文档。基线连续输入应先通过；
-应用启动样本若明显少于基线，就继续排查而不是把丢键归因于观察误差。
-自动 smoke 的 PID 采样会持续到原生窗口运动与召回之后，短到只覆盖启动前段的
-采样不能作为“普通位置更新不激活当前应用”的证据。
+先用真实 QA 构建复现，并同时保留三类证据：启动前后的前台 PID、启动期间持续
+发送到独立临时输入控件的按键数量，以及该控件的 AppKit first responder 是否
+从未丢失。探针必须拥有自己的临时控件和输出，不能借用或修改用户已经打开的
+TextEdit、编辑器或浏览器文档。基线连续输入应先通过；应用启动样本若明显少于
+基线，或 first responder 曾经丢失，就继续排查而不是把丢键归因于观察误差。
+`pnpm qa:desktop:auto` 会先用一个独立真实 Tauri 进程完成该探针并清理，再启动
+另一个真实进程执行会显式聚焦偏好窗口的产品 smoke，避免后者污染启动证据。
 
 ```bash
 pnpm qa:desktop:focus
@@ -133,8 +134,11 @@ pnpm qa:desktop:focus
 [`ADR 0002`](adr/0002-macos-background-launch-activation-handshake.md)：TAO 在
 `applicationDidFinishLaunching` 中的强制激活可在不改变前台 PID 的情况下清除
 其他应用的 first responder。正式实现必须在启动握手期间保持 Prohibited，setup
-完成后再切换为 Accessory。升级 Tauri、TAO 或 macOS 最低版本后应重跑真实连续
-输入探针；若行为变化，先检查上游实现，再决定是否调整两阶段策略。
+完成后再切换为 Accessory；可交互宠物必须是真正带
+`NSWindowStyleMaskNonactivatingPanel` 的 `NSPanel`，不能把该样式位强加给普通
+`NSWindow`，也不能靠长期 Prohibited 换取保焦点。升级原生面板依赖、Tauri、TAO
+或 macOS 最低版本后，应同时重跑真实连续输入探针，以及“输入—物理点击宠物—
+继续输入—拖拽宠物”回归；若行为变化，先检查上游实现和实际窗口类型。
 
 ## 菜单栏入口受限
 

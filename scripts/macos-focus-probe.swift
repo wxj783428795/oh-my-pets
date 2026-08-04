@@ -13,6 +13,8 @@ final class FocusProbeDelegate: NSObject, NSApplicationDelegate {
     private let resultPath: String
     private var window: NSWindow?
     private var input: NSTextField?
+    private var firstResponderWasLost = false
+    private var finished = false
 
     init(readyPath: String, resultPath: String) {
         self.readyPath = readyPath
@@ -41,6 +43,7 @@ final class FocusProbeDelegate: NSObject, NSApplicationDelegate {
         window.makeFirstResponder(input)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.monitorFirstResponder()
             FileManager.default.createFile(
                 atPath: self.readyPath,
                 contents: Data(),
@@ -50,9 +53,11 @@ final class FocusProbeDelegate: NSObject, NSApplicationDelegate {
         // PID 采样会跨越应用启动、原生位置更新和召回；给多次 osascript 查询
         // 留出足够时间，避免探针自身先退出而把焦点还给其他应用。
         DispatchQueue.main.asyncAfter(deadline: .now() + 8.0) {
+            self.finished = true
             let count = self.input?.stringValue.count ?? 0
             do {
-                try "\(count)\n".write(
+                let firstResponderState = self.firstResponderWasLost ? "lost" : "preserved"
+                try "\(count)\n\(firstResponderState)\n".write(
                     toFile: self.resultPath,
                     atomically: true,
                     encoding: .utf8
@@ -66,6 +71,22 @@ final class FocusProbeDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+
+    private func monitorFirstResponder() {
+        guard let window, let input else {
+            firstResponderWasLost = true
+            return
+        }
+        if !window.isKeyWindow || window.firstResponder !== input.currentEditor() {
+            firstResponderWasLost = true
+        }
+        if !finished {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                self.monitorFirstResponder()
+            }
+        }
+    }
+
 }
 
 let application = NSApplication.shared
