@@ -123,6 +123,12 @@ function createPack(): PetPackPayload {
       displayName: "Test Cat",
       description: "Fixture",
       canvas: { width: 2, height: 1 },
+      layout: {
+        baseline: { x: 1, y: 1 },
+        hitbox: { x: 0, y: 0, width: 2, height: 1 },
+        dropZone: { x: 0, y: 0, width: 2, height: 1 },
+        bubbleAnchor: { x: 1, y: 0 },
+      },
       actions: {
         one_shot: { loop: false, frames, cuePoints: [] },
         repeating: { loop: true, frames, cuePoints: [] },

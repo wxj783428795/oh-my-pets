@@ -2,7 +2,7 @@
 
 Type: task
 Kind: feature
-Status: open
+Status: claimed
 Closeout-Contract: v1
 Blocked by: 03
 
@@ -65,8 +65,37 @@ Blocked by: 03
 
 ## Comments
 
+- 2026-08-03：焦点缺陷已按实机证据修复。根因是 Accessory 应用中的普通
+  `NSWindow` 会在物理点击时清除其他应用的 first responder；永久 Prohibited
+  虽保住输入焦点，却使用户先操作其他应用后宠物收不到首次点击／拖拽。最终把
+  同一个 Tauri 宠物窗口转换为不可成为 key/main 的非激活 `NSPanel`，偏好设置
+  保持普通窗口。用户在唯一 QA 构建中确认 `asd → 点击宠物 → def` 的 `def` 正常
+  出现，且随后仍可拖动宠物。当前人工阻塞只剩单帧占位资源无法区分三类动作反馈。
+- 2026-08-03：自动焦点证据进一步硬化为两个互不重叠的真实 Tauri 进程。第一
+  进程在 AppKit 探针完成前若退出或报错会立即失败；取证完成后必须等待其实际
+  退出，才启动第二进程执行会显式聚焦偏好窗口的产品 smoke，避免把不同进程的
+  成功片段拼成假通过。
+- 2026-08-02：真实人工 QA 完成 17 项中的 14 项。用户确认原生拖拽、释放下落、
+  再次拖拽、菜单召回、文件无副作用、界面路径隐私、安静模式拖动和退出均可用；
+  但物理点击宠物后原应用输入焦点消失，违反本票焦点关闭条件。点击、拖拽／落地
+  和投喂的语义通路虽经自动 smoke 通过，当前内置卷卷仍为 15 个动作复用 1 张
+  `placeholder` 帧，导致 `tap_react`、`fall`、`land`、`feed_react` 与 `curious`
+  肉眼不可区分，三项可见反馈人工检查失败。Issue 4 保持 `claimed`；焦点缺陷需在
+  本票修复，可辨识动作关闭证据需等待 Issue 06 正式内容进入目标分支或由用户明确
+  调整交付顺序。
 - 2026-07-30：用户确认稳定最小窗口、应用级热区、整窗穿透开关和文件投喂隐私
   边界；候选版不以局部穿透为关闭条件。
+- 2026-07-31 23:02 CST：领取本票。实施分支为
+  `codex/macos-preview-candidate-04-direct-interactions`，base 为
+  `integration/macos-preview-candidate`，base commit 为
+  `c1376b85c42701059707840e20f0d62ba5d8665f`，Pull Request target 为
+  `integration/macos-preview-candidate`。Issue 03 已通过 Pull Request #12
+  合入该 base，依赖已解除；Issue 06 在独立 worktree 和独立 topic 分支并行，
+  两票不互相合并兄弟分支。
+- 2026-07-31：用户确认本票 TDD 公共 seams：Rust 交互仲裁；宠物包热区与输入
+  坐标转换；拖拽及释放速度采样；复用原生运动边界的抛掷、碰撞与落地控制器；
+  Tauri 输入／拖放命令和语义事件；真实桌面 smoke。测试只通过这些公共接口观察
+  行为，不绑定私有实现。
 - 2026-07-30：按用户批准的新策略迁移到
   `integration/macos-preview-candidate`；本票等待 `Issue 03` 的 Pull Request
   合入 integration 并完成 closeout 后再领取。
@@ -82,22 +111,37 @@ Blocked by: 03
 
 ### Verify
 
-- Status: pending
+- Status: passed
 - Command: `pnpm verify`
-- Result: pending
+- Result: 2026-08-03 CST：范围与架构检查、79 个 Rust 测试、160 个 Web／工程
+  测试、2 个 Chromium E2E、lint、WebView 构建、真实 Tauri release 构建和
+  closeout 扫描全部通过。最新 `pnpm qa:desktop:auto` 13/13 项通过；真实
+  `NSPanel` 契约通过，点击首帧 2 ms，独立 AppKit 输入探针收到 100/100 次按键，
+  first responder 全程保持且 10/10 次前台 PID 采样不变。
 
 ### Manual QA
 
-- Status: pending
+- Status: failed
 - Command: `pnpm qa:desktop`
-- Result: pending
-- Reason:
+- Result: 2026-08-02 CST：`target/desktop-smoke/manual-qa.json` 记录 14/17 项
+  通过，应用在退出检查前持续运行并干净退出。单屏召回、分辨率／缩放变化、菜单
+  恢复、偏好持久化与损坏恢复、物理点击穿透、安静模式和退出均通过；未伪记双屏
+  人工覆盖。
+- Reason: 焦点缺陷已由 2026-08-03 的唯一 QA 构建补充实测关闭；当前单帧占位
+  宠物包仍使点击、拖拽／落地和文件投喂没有可辨识的动作差异。用户同时确认拖拽
+  与释放下落实际发生、落地后仍可再次拖动和召回，投喂文件内容／位置不变且界面
+  不显示路径。
 
 ### Review
 
-- Standards: pending
-- Spec: pending
-- Notes: pending
+- Standards: passed
+- Spec: blocked
+- Notes: 2026-08-03 按固定 base `c1376b85c42701059707840e20f0d62ba5d8665f`
+  重跑双轴复核。Standards 首轮发现独立焦点探针未拒绝目标进程提前退出；TDD
+  修复后复核为 no findings。直接互动 smoke 与生产编排重复、`PetWindow.vue`
+  职责集中及原生面板宏的主线程约束记录为非阻塞维护风险。Spec 未发现新增代码级
+  偏差，但仍被单帧内容导致的 3 项人工可见反馈失败、未完成提交／PR／远端门禁
+  阻塞；双屏与混合缩放实机覆盖仍是残余风险。
 
 ### Commit
 
@@ -106,4 +150,5 @@ Blocked by: 03
 
 ## Answer
 
-待实施。
+直接互动、原生抛掷与无副作用投喂的语义和系统通路已实现，物理点击保焦点且仍可
+拖动的缺陷已经实机关闭；单帧占位内容仍无法提供独立可见反馈，本票暂不关闭。

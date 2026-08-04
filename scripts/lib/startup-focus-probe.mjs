@@ -79,9 +79,18 @@ async function collectEvidence({
     }
     await typing;
     await waitForFile(resultPath, probe, "焦点探针");
-    const typedCount = Number.parseInt(readFileSync(resultPath, "utf8"), 10);
+    const [typedCountText, firstResponderState] = readFileSync(
+      resultPath,
+      "utf8",
+    )
+      .trim()
+      .split(/\s+/);
+    const typedCount = Number.parseInt(typedCountText, 10);
     if (!Number.isInteger(typedCount)) {
       throw new Error("焦点探针没有返回有效的按键数量");
+    }
+    if (firstResponderState !== "preserved" && firstResponderState !== "lost") {
+      throw new Error("焦点探针没有返回有效的 first responder 状态");
     }
     return {
       beforePid,
@@ -89,6 +98,7 @@ async function collectEvidence({
       observedPids,
       typedCount,
       minimumTypedCount: keyCount,
+      firstResponderPreserved: firstResponderState === "preserved",
     };
   } finally {
     if (probe.exitCode === null && probe.signalCode === null) {

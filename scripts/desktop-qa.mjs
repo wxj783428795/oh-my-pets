@@ -109,7 +109,7 @@ function waitForProcess(child) {
   });
 }
 
-async function runProcess(environment) {
+async function runStartupFocusProbe(environment) {
   const { evidence, target: child } = await startMacosStartupFocusProbe({
     repositoryRoot,
     targetPath: binaryPath,
@@ -118,12 +118,20 @@ async function runProcess(environment) {
   if (!child) {
     throw new Error("启动焦点探针没有创建桌面应用进程");
   }
-  const completion = waitForProcess(child);
   return finishProbedProcess({
     evidence,
     target: child,
-    completion,
   });
+}
+
+async function runAutomaticSmokeProcess(environment) {
+  const child = spawn(binaryPath, [], {
+    cwd: repositoryRoot,
+    env: { ...process.env, ...environment },
+    detached: false,
+    stdio: "inherit",
+  });
+  await waitForProcess(child);
 }
 
 async function runAutomaticQa() {
@@ -134,7 +142,10 @@ async function runAutomaticQa() {
   rmSync(automaticReportPath, { force: true });
   rmSync(qaPreferencesPath, { force: true });
   const sourceFingerprint = desktopSourceFingerprint();
-  const startupFocus = await runProcess({
+  const startupFocus = await runStartupFocusProbe({
+    OH_MY_PETS_QA_PREFERENCES_PATH: qaPreferencesPath,
+  });
+  await runAutomaticSmokeProcess({
     OH_MY_PETS_DESKTOP_SMOKE_REPORT: automaticReportPath,
     OH_MY_PETS_QA_PREFERENCES_PATH: qaPreferencesPath,
   });
