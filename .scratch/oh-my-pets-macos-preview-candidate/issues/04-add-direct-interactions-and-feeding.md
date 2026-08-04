@@ -65,6 +65,11 @@ Blocked by: 03
 
 ## Comments
 
+- 2026-08-04：实现提交 `1fe53236734ec930883cdf0107935016199ffac1` 已推送，
+  并创建指向 `integration/macos-preview-candidate` 的 Draft Pull Request #13。
+  Draft Actions 可以先验证当前实现，但 Issue 06 / PR #11 仍为 `claimed` 且存在
+  未提交的正式动画修复；本票三项可见反馈人工检查因此仍未通过，不在该依赖合入
+  和补验前转 Ready 或合并。
 - 2026-08-03：焦点缺陷已按实机证据修复。根因是 Accessory 应用中的普通
   `NSWindow` 会在物理点击时清除其他应用的 first responder；永久 Prohibited
   虽保住输入焦点，却使用户先操作其他应用后宠物收不到首次点击／拖拽。最终把
@@ -145,8 +150,8 @@ Blocked by: 03
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: `1fe53236734ec930883cdf0107935016199ffac1`
 
 ## Answer
 
