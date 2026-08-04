@@ -53,6 +53,12 @@ const MIN_MEDIAN_FRAME_HEIGHT = Object.freeze({
 });
 const NORMALIZED_SIGNATURE_EDGE = 48;
 const MAX_NORMALIZED_MEAN_DELTA = 2;
+const MIN_IDLE_ALPHA_INTERSECTION_OVER_UNION = 0.86;
+const MIN_LOOP_SEAM_ALPHA_INTERSECTION_OVER_UNION = Object.freeze({
+  fall: 0.7,
+  sleep: 0.82,
+});
+const VISIBLE_ALPHA_THRESHOLD = 16;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
 function issue(code, path, message) {
@@ -584,6 +590,129 @@ function validateFramePixels({
   return issues;
 }
 
+function frameAlphaMask(image, frame, canvas) {
+  if (
+    !frameInsideImage(frame, image) ||
+    !framePlacementInsideCanvas(frame, canvas)
+  ) {
+    return null;
+  }
+  const mask = new Uint8Array(canvas.width * canvas.height);
+  for (let y = 0; y < frame.h; y += 1) {
+    for (let x = 0; x < frame.w; x += 1) {
+      const alpha =
+        image.data[pixelOffset(image, frame.x + x, frame.y + y) + 3];
+      if (alpha <= VISIBLE_ALPHA_THRESHOLD) {
+        continue;
+      }
+      const canvasX = frame.offsetX + x;
+      const canvasY = frame.offsetY + y;
+      mask[canvasY * canvas.width + canvasX] = 1;
+    }
+  }
+  return mask;
+}
+
+function alphaIntersectionOverUnion(left, right) {
+  let intersection = 0;
+  let union = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] || right[index]) {
+      union += 1;
+      if (left[index] && right[index]) {
+        intersection += 1;
+      }
+    }
+  }
+  return union === 0 ? 1 : intersection / union;
+}
+
+function validateIdleSilhouetteContinuity(manifest, atlas, image) {
+  const action = manifest.actions?.idle;
+  const canvas = manifest.canvas;
+  if (
+    !action?.loop ||
+    !Array.isArray(action.frames) ||
+    !canvas?.width ||
+    !canvas?.height
+  ) {
+    return [];
+  }
+  const masks = action.frames.map((frame) => {
+    const atlasFrame = atlas.frames?.[frame.ref];
+    return atlasFrame
+      ? frameAlphaMask(image, atlasFrame, canvas)
+      : null;
+  });
+  const issues = [];
+  for (let index = 0; index < action.frames.length; index += 1) {
+    const nextIndex = (index + 1) % action.frames.length;
+    const left = masks[index];
+    const right = masks[nextIndex];
+    if (!left || !right) {
+      continue;
+    }
+    const overlap = alphaIntersectionOverUnion(left, right);
+    if (overlap >= MIN_IDLE_ALPHA_INTERSECTION_OVER_UNION) {
+      continue;
+    }
+    const leftRef = action.frames[index].ref;
+    const rightRef = action.frames[nextIndex].ref;
+    issues.push(
+      issue(
+        "production.action-silhouette-jump",
+        `pet.json.actions.idle.frames[${nextIndex}]`,
+        `idle 相邻帧 ${leftRef} -> ${rightRef} 的角色轮廓重合度 ${(overlap * 100).toFixed(1)}% 低于 86.0%，存在肉眼跳变`,
+      ),
+    );
+  }
+  return issues;
+}
+
+function validateLoopSeamContinuity(manifest, atlas, image) {
+  const issues = [];
+  const canvas = manifest.canvas;
+  if (!canvas?.width || !canvas?.height) {
+    return issues;
+  }
+  for (const [actionName, minimumOverlap] of Object.entries(
+    MIN_LOOP_SEAM_ALPHA_INTERSECTION_OVER_UNION,
+  )) {
+    const action = manifest.actions?.[actionName];
+    if (
+      !action?.loop ||
+      !Array.isArray(action.frames) ||
+      action.frames.length < 2
+    ) {
+      continue;
+    }
+    const firstRef = action.frames[0].ref;
+    const lastRef = action.frames.at(-1).ref;
+    const firstFrame = atlas.frames?.[firstRef];
+    const lastFrame = atlas.frames?.[lastRef];
+    if (!firstFrame || !lastFrame) {
+      continue;
+    }
+    const firstMask = frameAlphaMask(image, firstFrame, canvas);
+    const lastMask = frameAlphaMask(image, lastFrame, canvas);
+    if (!firstMask || !lastMask) {
+      continue;
+    }
+    const overlap = alphaIntersectionOverUnion(lastMask, firstMask);
+    if (overlap >= minimumOverlap) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "production.action-loop-seam-jump",
+        `pet.json.actions.${actionName}.frames[0]`,
+        `${actionName} 循环首尾 ${lastRef} -> ${firstRef} 的角色轮廓重合度 ${(overlap * 100).toFixed(1)}% 低于 ${(minimumOverlap * 100).toFixed(1)}%，存在肉眼跳变`,
+      ),
+    );
+  }
+  return issues;
+}
+
 export function validateProductionPetPixels(manifest, atlas, image) {
   const frameActions = new Map();
   for (const [actionName, action] of Object.entries(manifest.actions ?? {})) {
@@ -593,17 +722,23 @@ export function validateProductionPetPixels(manifest, atlas, image) {
   }
   const rawSignatures = new Map();
   const normalizedFrames = [];
-  return Object.entries(atlas.frames ?? {}).flatMap(([frameName, frame]) =>
-    validateFramePixels({
-      manifest,
-      image,
-      frameActions,
-      rawSignatures,
-      normalizedFrames,
-      frameName,
-      frame,
-    }),
+  const issues = Object.entries(atlas.frames ?? {}).flatMap(
+    ([frameName, frame]) =>
+      validateFramePixels({
+        manifest,
+        image,
+        frameActions,
+        rawSignatures,
+        normalizedFrames,
+        frameName,
+        frame,
+      }),
   );
+  return [
+    ...issues,
+    ...validateIdleSilhouetteContinuity(manifest, atlas, image),
+    ...validateLoopSeamContinuity(manifest, atlas, image),
+  ];
 }
 
 function paethPredictor(left, above, upperLeft) {

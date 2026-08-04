@@ -269,6 +269,124 @@ describe("正式卷卷资产契约", () => {
     );
   });
 
+  test("拒绝待机循环中相邻帧的角色轮廓突然换位", () => {
+    const manifest = {
+      canvas: { width: 4, height: 4 },
+      layout: { baseline: { y: 4 } },
+      actions: {
+        idle: {
+          loop: true,
+          frames: [
+            { ref: "idle_00", durationMs: 120 },
+            { ref: "idle_01", durationMs: 120 },
+          ],
+        },
+      },
+    };
+    const atlas = {
+      frames: {
+        idle_00: { x: 0, y: 0, w: 2, h: 4, offsetX: 0, offsetY: 0 },
+        idle_01: { x: 2, y: 0, w: 2, h: 4, offsetX: 2, offsetY: 0 },
+      },
+    };
+    const image = rgbaImage(4, 4, (data, width) => {
+      for (let y = 0; y < 4; y += 1) {
+        for (let x = 0; x < 2; x += 1) {
+          paintPixel(data, width, x, y, [232, 132, 52, 255]);
+          paintPixel(data, width, x + 2, y, [205, 90, 24, 255]);
+        }
+      }
+    });
+
+    expect(validateProductionPetPixels(manifest, atlas, image)).toContainEqual(
+      expect.objectContaining({ code: "production.action-silhouette-jump" }),
+    );
+  });
+
+  test("拒绝睡眠循环首尾的角色轮廓断裂", () => {
+    const manifest = {
+      canvas: { width: 4, height: 4 },
+      layout: { baseline: { y: 4 } },
+      actions: {
+        sleep: {
+          loop: true,
+          frames: [
+            { ref: "sleep_00", durationMs: 120 },
+            { ref: "sleep_01", durationMs: 120 },
+          ],
+        },
+      },
+    };
+    const atlas = {
+      frames: {
+        sleep_00: { x: 0, y: 0, w: 2, h: 4, offsetX: 0, offsetY: 0 },
+        sleep_01: { x: 2, y: 0, w: 2, h: 4, offsetX: 2, offsetY: 0 },
+      },
+    };
+    const image = rgbaImage(4, 4, (data, width) => {
+      for (let y = 0; y < 4; y += 1) {
+        for (let x = 0; x < 2; x += 1) {
+          paintPixel(data, width, x, y, [232, 132, 52, 255]);
+          paintPixel(data, width, x + 2, y, [205, 90, 24, 255]);
+        }
+      }
+    });
+
+    expect(validateProductionPetPixels(manifest, atlas, image)).toContainEqual(
+      expect.objectContaining({ code: "production.action-loop-seam-jump" }),
+    );
+  });
+
+  test("拒绝坠落循环首尾的角色轮廓断裂", () => {
+    const manifest = {
+      canvas: { width: 4, height: 4 },
+      layout: { baseline: { y: 4 } },
+      actions: {
+        fall: {
+          loop: true,
+          frames: [
+            { ref: "fall_00", durationMs: 120 },
+            { ref: "fall_01", durationMs: 120 },
+          ],
+        },
+      },
+    };
+    const atlas = {
+      frames: {
+        fall_00: { x: 0, y: 0, w: 2, h: 4, offsetX: 0, offsetY: 0 },
+        fall_01: { x: 2, y: 0, w: 2, h: 4, offsetX: 2, offsetY: 0 },
+      },
+    };
+    const image = rgbaImage(4, 4, (data, width) => {
+      for (let y = 0; y < 4; y += 1) {
+        for (let x = 0; x < 2; x += 1) {
+          paintPixel(data, width, x, y, [232, 132, 52, 255]);
+          paintPixel(data, width, x + 2, y, [205, 90, 24, 255]);
+        }
+      }
+    });
+
+    expect(validateProductionPetPixels(manifest, atlas, image)).toContainEqual(
+      expect.objectContaining({ code: "production.action-loop-seam-jump" }),
+    );
+  });
+
+  test("损坏的循环动作缺少 frames 时由元数据校验报告而不在像素检查抛错", () => {
+    const manifest = {
+      canvas: { width: 1, height: 1 },
+      layout: { baseline: { y: 1 } },
+      actions: {
+        idle: { loop: true },
+        sleep: { loop: true },
+        fall: { loop: true },
+      },
+    };
+    const atlas = { frames: {} };
+    const image = rgbaImage(1, 1, () => undefined);
+
+    expect(validateProductionPetPixels(manifest, atlas, image)).toEqual([]);
+  });
+
   test("公开检查入口读取正式图集并接受完整宠物包", async () => {
     const packDirectory = resolve("assets/pets/juanjuan");
     const atlas = JSON.parse(

@@ -36,8 +36,8 @@ ACTION_CONFIG: dict[str, dict[str, Any]] = {
         "grid": (3, 2),
         "loop": True,
         "height": 235,
-        "durations": [720, 180, 160, 120, 160, 520],
-        "cues": [("blink", 900), ("tail-flick", 720)],
+        "durations": [580, 100, 90, 100, 100, 480],
+        "cues": [("blink", 580), ("tail-flick", 580)],
     },
     "walk_left": {
         "count": 6,
@@ -60,8 +60,8 @@ ACTION_CONFIG: dict[str, dict[str, Any]] = {
         "grid": (5, 1),
         "loop": True,
         "height": 150,
-        "durations": [280, 520, 600, 600, 520],
-        "cues": [("settle", 280)],
+        "durations": [380] * 5,
+        "cues": [("settle", 380)],
     },
     "drag_hold": {
         "count": 2,
@@ -77,8 +77,8 @@ ACTION_CONFIG: dict[str, dict[str, Any]] = {
         "grid": (3, 1),
         "loop": True,
         "height": 200,
-        "bottoms": [246, 262, 280],
-        "durations": [100, 100, 100],
+        "bottoms": [264, 270, 264],
+        "durations": [120, 120, 120],
         "cues": [("drop", 40)],
     },
     "land": {

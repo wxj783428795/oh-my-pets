@@ -183,6 +183,45 @@ Blocked by: none
   topic 分支。唯一内容冲突位于 `docs/agents/delivery-readiness.md`：保留
   Issue 03 的真实原生运动／显示器 QA，并同时保留本票正式卷卷 15 动作、三档
   尺寸和透明边缘人工验收；桌面 smoke 仍不得替代内容资源验收。
+- 2026-07-31 23:05:59 +0800：用户在真实桌面继续视觉复查时明确判定“现在的
+  动作不流畅”，因此本票继续保持 `claimed`，此前视觉通过结论不得用于关闭。
+  本轮先以桌面实际持续播放的 `idle` 建立最小红灯：现有 6 帧时长为
+  `720/180/160/120/160/520ms`，且 `idle_02 -> idle_03`、
+  `idle_03 -> idle_04` 的标准画布透明轮廓重合度分别仅为 `79.3%`、`82.4%`，
+  对应长停顿后头身与卷尾突然换形。approved spec 对应的公共验证 seams 为：
+  正式 `pet.json + atlas.json + atlas.png` 通过公开
+  `validateProductionPetPixels`／`pnpm pet:assets:check` 检查静止待机相邻帧
+  轮廓连续性；同一声明式动作再由实际 PixiJS 循环、动效预览与真实桌面三档
+  尺寸确认肉眼无跳变。位图修复继续使用 imagegen2，并保持本仓库 15 动作、
+  86 帧、`320×320` 单图集契约，不强套 `hatch-pet` 的 Codex v2 包装格式。
+- 2026-07-31 23:15:52 +0800：imagegen2 重制的完整 `idle` 六帧动作条经确定性
+  组装后，相邻轮廓重合度提升到 `92.1%–95.7%`，独立视觉 reviewer 判定
+  `idle` 平滑；但同一 reviewer 仍阻断整票，指出 `sleep` 末帧蜷卧闭眼回首帧
+  睁眼趴卧、`fall` 末帧四足低伏回首帧后身抬高，均有明显循环跳变。实测两者
+  首尾轮廓重合度分别仅 `75.2%`、`34.9%`。因此已停止会被后续位图改动作废的
+  `pnpm verify`，继续以公开宠物包像素校验建立循环 seam 红灯，并分别重制两张
+  完整动作条；不得拼接单个修补帧或把视觉失败伪记为通过。
+- 2026-07-31 23:30:30 +0800：`sleep` 完整五帧重制后首尾轮廓重合度提升到
+  `86.0%`，独立 reviewer 确认始终闭眼蜷卧且呼吸回环平滑。首版 `fall`
+  修复虽把 seam 提升到 `89.0%`，却被 reviewer 判为低伏警觉而非下落；第二次
+  文本强化仍由 imagegen worker 主动拒绝为贴地扑跃。按 `hatch-pet` 收敛规则
+  改用既有明确悬空的 `fall_00` 作为姿态锚点后，第三版三帧均保持头低臀高、
+  后爪悬空和卷尾上扬，首尾轮廓重合度为 `93.1%`。同一独立 reviewer 最终确认
+  `fall` 内部过渡与回环均连贯，并对全部 15 行返回视觉通过；真实 `.app` 三档
+  尺寸与用户人工观感仍须在本轮新资源上重新确认。机械红灯、完整 10 项资产
+  契约测试和 `pnpm pet:assets:check` 已转绿。
+- 2026-07-31 23:43:27 +0800：本轮最终 Standards 轴无阻塞项，Spec 轴为
+  `pass-with-closeout-pending`。Standards 的唯一非阻塞发现是损坏清单把循环动作
+  标为 `loop: true` 却漏掉 `frames` 时，连续性像素校验会抛 `TypeError`；按
+  TDD 先以公开 `validateProductionPetPixels` 复现红灯，再为 `idle` 和循环 seam
+  加入 `Array.isArray` guard，11 项资产契约测试、Web lint 与资产检查转绿。
+  最后一轮相关资源上的 `pnpm verify` 曾完整通过，但该 guard 属于后续相关改动，
+  因此提交前仍须从头重跑。真实 `pnpm qa:desktop:auto` 已连续两次因外部 ToDesk
+  固定占用前台 PID `34450` 而在焦点探针失败；Finder 激活也被立即抢回，未结束
+  或修改 ToDesk，且绝不把该结果记为通过。Computer Use 同样在此环境超时；随后
+  只直接启动本 worktree 新构建的 `.app` 供用户观看，并清理重复实例，仅保留
+  一个进程。新版人工动作观感与正式交互式 `pnpm qa:desktop` 仍待用户确认，
+  本票继续保持 `claimed`。
 - 2026-07-30：用户明确把正式美术交给 Codex，并确认保留现有身份锚点、重新
   设计原创扁平 2D 风格。规划 Pull Request 合入 `main` 后，本票与
   `Issue 01` 构成首批可领取 frontier。

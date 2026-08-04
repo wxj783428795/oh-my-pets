@@ -6,7 +6,7 @@
 ## 包内容
 
 - `pet.json`：`sprite-atlas-v1` 清单、动作时间线、cue point 和交互锚点。
-- `atlas.json` / `atlas.png`：单张 `2560×1920` 透明图集，共 86 个独立帧。
+- `atlas.json` / `atlas.png`：单张 `2560×1899` 透明图集，共 86 个独立帧。
 - `preview.png`：`320×320` 标准画布上的默认预览。
 - `LICENSE.txt`：来源、使用权和第三方素材边界。
 
@@ -37,6 +37,16 @@
 `reference/` 中的第三方角色、帧或图集。原始姿态表是制作过程文件，位于被忽略的
 `output/juanjuan-production/`，不作为运行时资产提交。
 
+2026-07-31 根据真实桌面视觉反馈继续使用 OpenAI ImageGen 2 重制完整 `idle`
+六帧动作条，以同一角色锚点约束头身、四脚、卷尾、尺度和脚底基线，只保留连续
+眨眼、轻呼吸与轻尾摆；没有拼贴单帧或从第三方素材补帧。随后重新运行同一确定性
+组装流程和全包校验。
+
+同日独立动效复审继续发现 `sleep` 与 `fall` 的循环首尾跳变，因此分别重制完整
+五帧和三帧动作条。`sleep` 全程保持闭眼蜷卧的呼吸回环；`fall` 先用既有明确
+悬空的 `fall_00` 提取姿态锚点，再让 ImageGen 2 生成同一头低臀高、后爪悬空
+姿态家族的微变化，避免把低伏或落地帧混入下落循环。
+
 生成输入的 SHA-256 记录如下，用于把正式图集追溯到本次制作批次：
 
 ```text
@@ -44,15 +54,15 @@
 f8ed7cbba6cbdad9888f47ec4d20e1c42e7a1dfa4d18a80e98c623fb254bd5c9  curious.png
 e0ab8eb1f119b45e6ab007f88ed95035046eb74e646e10e4221488eacfa0fd26  drag_hold.png
 2ef6b7ad6383538b5a27752c551624c259b914e54931f19bce5ee05c03e65770  edge_play.png
-8b57e9c123b1a39735bd7d96cd7d7d99f9748eee5303c9b77b8d7acd58ede954  fall.png
+a92a10fce3ac2845ff527fa27b861b9e22fd5d994d148ff0d876fe81815a281e  fall.png
 d0496de2e487a4c13d9cafdcddff14895073fb1907b540dd36f88afe17391851  feed_react.png
-68f57d74cc46438888ca034d2a01dc1ec6a6b2821b51278ec44288bf8ebb2ffe  idle.png
+ac19440a4e84125d69a3eb89eee9a3df6bf1e693c427821dbc765d6db4d7e281  idle.png
 5ad62fb79dc9946c0fa1e608d083843015145536d2739027a54f000f31f26882  intro.png
 1e16f2d4ca66b421fe32f4fa88af8b13d397ecf290fb6a03ea4c019c4f592821  land.png
 fd2c01b45c9463256e8bfb1beddc9002da1a20d7a99db5913659bfd33dc4799c  quiet_idle.png
 10af3cd4a1241972be4271d7c8c3df1eed2ae8903152b2da5b3059091ee0f53b  rare_1.png
 5cd8b3b5260e3581fabfd85206ac9c87955b2d7ad0a27213c2e7081752557c08  rare_2.png
-0c33fd1dfa42144bf3ca59156ca2b2333704d47798ebf4af571b2c0c3b5105b0  sleep.png
+bb6ae447d94b5c56fbdb0e0fd07137c054527907a82e0a552c19bf8287909b62  sleep.png
 01615a93f756eb164ffc7fa5ac0b1be6e4032890fee08eb1762792ac4f41a362  tap_react.png
 9391f688f0b6e185bf4a6f4a5b400f6802eb77c093c3d370b779d0333b8cfc95  walk_left.png
 6a7b052bcbaf53dba799fdc34f077af5b2ec04c6999643aebb18dc546b7efae4  walk_right.png
@@ -77,8 +87,8 @@ pnpm pet:assets:check
 ```
 
 该检查覆盖动作和帧预算、引用唯一性、标准画布放置、动作主体占比、图集尺寸、
-透明边界、脚底基线，以及原始像素和归一化轮廓重复，防止用重复帧、整体平移或
-简单缩放冒充逐帧动画。
+透明边界、脚底基线、待机相邻轮廓连续性、睡眠／坠落循环 seam，以及原始像素和
+归一化轮廓重复，防止用明显跳变、重复帧、整体平移或简单缩放冒充逐帧动画。
 
 ## 审阅与限制
 

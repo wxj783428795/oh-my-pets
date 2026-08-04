@@ -85,37 +85,37 @@
       "frames": [
         {
           "ref": "idle_00",
-          "durationMs": 720
+          "durationMs": 580
         },
         {
           "ref": "idle_01",
-          "durationMs": 180
+          "durationMs": 100
         },
         {
           "ref": "idle_02",
-          "durationMs": 160
+          "durationMs": 90
         },
         {
           "ref": "idle_03",
-          "durationMs": 120
+          "durationMs": 100
         },
         {
           "ref": "idle_04",
-          "durationMs": 160
+          "durationMs": 100
         },
         {
           "ref": "idle_05",
-          "durationMs": 520
+          "durationMs": 480
         }
       ],
       "cuePoints": [
         {
           "name": "blink",
-          "timeMs": 900
+          "timeMs": 580
         },
         {
           "name": "tail-flick",
-          "timeMs": 720
+          "timeMs": 580
         }
       ]
     },
@@ -202,29 +202,29 @@
       "frames": [
         {
           "ref": "sleep_00",
-          "durationMs": 280
+          "durationMs": 380
         },
         {
           "ref": "sleep_01",
-          "durationMs": 520
+          "durationMs": 380
         },
         {
           "ref": "sleep_02",
-          "durationMs": 600
+          "durationMs": 380
         },
         {
           "ref": "sleep_03",
-          "durationMs": 600
+          "durationMs": 380
         },
         {
           "ref": "sleep_04",
-          "durationMs": 520
+          "durationMs": 380
         }
       ],
       "cuePoints": [
         {
           "name": "settle",
-          "timeMs": 280
+          "timeMs": 380
         }
       ]
     },
@@ -247,15 +247,15 @@
       "frames": [
         {
           "ref": "fall_00",
-          "durationMs": 100
+          "durationMs": 120
         },
         {
           "ref": "fall_01",
-          "durationMs": 100
+          "durationMs": 120
         },
         {
           "ref": "fall_02",
-          "durationMs": 100
+          "durationMs": 120
         }
       ],
       "cuePoints": [
