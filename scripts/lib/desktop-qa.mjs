@@ -34,6 +34,7 @@ export function startupFocusPreserved({
   observedPids,
   typedCount,
   minimumTypedCount,
+  firstResponderPreserved,
 }) {
   return (
     Number.isInteger(beforePid) &&
@@ -45,7 +46,8 @@ export function startupFocusPreserved({
     Number.isInteger(typedCount) &&
     Number.isInteger(minimumTypedCount) &&
     minimumTypedCount > 0 &&
-    typedCount >= minimumTypedCount
+    typedCount >= minimumTypedCount &&
+    firstResponderPreserved === true
   );
 }
 
@@ -53,27 +55,133 @@ function processIsRunning(process) {
   return process.exitCode === null && process.signalCode === null;
 }
 
+function monitorTargetProcess(target) {
+  if (typeof target.once !== "function" || typeof target.off !== "function") {
+    return {
+      failure: new Promise(() => {}),
+      dispose() {},
+    };
+  }
+
+  let rejectFailure;
+  const failure = new Promise((_, reject) => {
+    rejectFailure = reject;
+  });
+  const onExit = (code, signal) => {
+    rejectFailure(
+      new Error(
+        `真实桌面应用在焦点取证完成前提前退出：code=${String(code)}, signal=${String(signal)}`,
+      ),
+    );
+  };
+  const onError = (error) => {
+    rejectFailure(
+      new Error(`真实桌面应用在焦点取证期间发生错误：${error.message}`, {
+        cause: error,
+      }),
+    );
+  };
+  target.once("exit", onExit);
+  target.once("error", onError);
+  if (!processIsRunning(target)) {
+    queueMicrotask(() => onExit(target.exitCode, target.signalCode));
+  }
+
+  return {
+    failure,
+    dispose() {
+      target.off("exit", onExit);
+      target.off("error", onError);
+    },
+  };
+}
+
+async function terminateTargetProcess(target, timeoutMs = 5_000) {
+  if (!processIsRunning(target)) {
+    return;
+  }
+  if (typeof target.once !== "function" || typeof target.off !== "function") {
+    target.kill();
+    return;
+  }
+
+  await new Promise((resolveTermination, rejectTermination) => {
+    let settled = false;
+    let timeout;
+    const finish = (callback, value) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      target.off("exit", onExit);
+      target.off("error", onError);
+      callback(value);
+    };
+    const onExit = () => finish(resolveTermination);
+    const onError = (error) => finish(rejectTermination, error);
+    target.once("exit", onExit);
+    target.once("error", onError);
+    if (!processIsRunning(target)) {
+      finish(resolveTermination);
+      return;
+    }
+    try {
+      const signalled = target.kill();
+      if (!processIsRunning(target)) {
+        finish(resolveTermination);
+      } else if (signalled === false) {
+        finish(
+          rejectTermination,
+          new Error("无法终止启动焦点探针的真实桌面应用进程"),
+        );
+      } else {
+        timeout = setTimeout(
+          () =>
+            finish(
+              rejectTermination,
+              new Error("启动焦点探针的真实桌面应用进程未及时退出"),
+            ),
+          timeoutMs,
+        );
+      }
+    } catch (error) {
+      finish(rejectTermination, error);
+    }
+  });
+}
+
 export async function finishProbedProcess({
   evidence,
   target,
-  completion,
 }) {
+  const targetProcess = monitorTargetProcess(target);
+  let startupFocus;
+  let operationError;
   try {
-    const startupFocus = await evidence;
-    startupFocus.preserved = startupFocusPreserved(startupFocus);
-    await completion;
-    return startupFocus;
-  } catch (error) {
-    if (processIsRunning(target)) {
-      target.kill();
+    startupFocus = await Promise.race([
+      evidence,
+      targetProcess.failure,
+    ]);
+    if (!processIsRunning(target)) {
+      throw new Error("真实桌面应用在焦点取证完成前提前退出");
     }
-    await Promise.resolve(completion).catch(() => {});
-    throw error;
-  } finally {
-    if (processIsRunning(target)) {
-      target.kill();
+    startupFocus.preserved = startupFocusPreserved(startupFocus);
+  } catch (error) {
+    operationError = error;
+  }
+  targetProcess.dispose();
+  try {
+    await terminateTargetProcess(target);
+  } catch (cleanupError) {
+    if (operationError === undefined) {
+      operationError = cleanupError;
     }
   }
+  if (operationError !== undefined) {
+    throw operationError;
+  }
+  return startupFocus;
 }
 
 export function desktopExecutablePath({

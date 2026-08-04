@@ -137,6 +137,12 @@ function createPack(
       displayName: "Test Cat",
       description: "Fixture",
       canvas,
+      layout: {
+        baseline: { x: 0, y: 1 },
+        hitbox: { x: 0, y: 0, width: 1, height: 1 },
+        dropZone: { x: 0, y: 0, width: 1, height: 1 },
+        bubbleAnchor: { x: 0, y: 0 },
+      },
       actions: {},
     },
     atlas: {

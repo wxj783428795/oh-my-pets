@@ -210,6 +210,29 @@ Blocked by: none
   `fall` 内部过渡与回环均连贯，并对全部 15 行返回视觉通过；真实 `.app` 三档
   尺寸与用户人工观感仍须在本轮新资源上重新确认。机械红灯、完整 10 项资产
   契约测试和 `pnpm pet:assets:check` 已转绿。
+- 2026-08-04 13:04:37 CST：再次 fetch 正式上游，确认
+  `origin/integration/macos-preview-candidate` 已通过 PR #13 推进到完整提交
+  `42d3101f31967f591971c8e9386fba4885efec26`。本分支仍只合入正式
+  integration，没有读取、修改或合并 Issue 03 / Issue 04 的兄弟 worktree、
+  topic 分支或未提交文件。三个冲突均来自同一职责交汇：
+  `PetWindow.vue`、`PetWindow.test.ts` 和 `pet-renderer.ts` 中，本票的持续
+  `idle` 逐帧播放与上游的点击／拖拽／投喂动作、首帧回执同时修改了播放入口。
+  语义合并保留两边意图：普通交互动作按 Rust 的 `holdMs` 结束且继续回报首帧，
+  `idle` 使用同一渲染核心持续循环；交互开始停止待机，完成返回 `idle` 后恢复
+  持续逐帧播放。新增前端契约测试锁定该恢复 seam；窄范围 24 项 Vitest 与
+  `pnpm lint:web` 已通过，合并完成后仍须重跑最终 `pnpm verify`。
+- 2026-08-04 13:16 CST：上游合并后的 Standards + Spec 双轴 review 各发现
+  一个阻塞交汇缺陷，均按 TDD 小切片修复。Standards 轴指出点击穿透取消动作
+  返回持续 `idle` 时没有 `pet-interaction-visible` 首帧回执，会使真实桌面自动
+  smoke 超时；先在“互动完成恢复持续待机”前端测试中确认 revision 2 回执红灯，
+  再让声明式 `idle` 以同一个 `playUntilStopped` 首帧回调发出回执。Spec 轴指出
+  Issue 04 的占位时长会把正式 `land`、`tap_react`、`feed_react` 分别从
+  `500/720/1320ms` 提前截断为 `320/620/1100ms`；先加入 Rust 正式动作时长
+  红灯，再让有限交互动作从当前已加载宠物包逐帧求和，只有包不可用或溢出时才
+  回退宿主安全值，`idle/drag_hold/fall` 的长期仲裁保持不变。16 项直接互动
+  Rust 测试、24 项相关前端测试与完整 lint 已转绿；因这些是 review 后相关改动，
+  双轴复核确认原发现均已关闭且无新增阻塞；提交前仍须在当前最终工作树重跑
+  `pnpm verify`，未全绿不得完成合并提交。
 - 2026-07-31 23:43:27 +0800：本轮最终 Standards 轴无阻塞项，Spec 轴为
   `pass-with-closeout-pending`。Standards 的唯一非阻塞发现是损坏清单把循环动作
   标为 `loop: true` 却漏掉 `frames` 时，连续性像素校验会抛 `TypeError`；按

@@ -71,17 +71,25 @@ export class PetRenderer {
     this.applyFrame(firstFrame);
   }
 
-  async play(actionName: string, holdMs: number): Promise<void> {
-    await this.playAction(actionName, holdMs);
+  async play(
+    actionName: string,
+    holdMs: number,
+    onFirstFrame?: () => void,
+  ): Promise<void> {
+    await this.playAction(actionName, holdMs, onFirstFrame);
   }
 
-  async playUntilStopped(actionName: string): Promise<void> {
-    await this.playAction(actionName, null);
+  async playUntilStopped(
+    actionName: string,
+    onFirstFrame?: () => void,
+  ): Promise<void> {
+    await this.playAction(actionName, null, onFirstFrame);
   }
 
   private async playAction(
     actionName: string,
     holdMs: number | null,
+    onFirstFrame?: () => void,
   ): Promise<void> {
     this.stop();
     const token = this.playToken;
@@ -92,6 +100,7 @@ export class PetRenderer {
 
     const startedAt = performance.now();
     let index = 0;
+    let firstFramePending = true;
     await new Promise<void>((resolve) => {
       const finish = () => {
         if (this.resolvePlay === finish) {
@@ -106,7 +115,11 @@ export class PetRenderer {
           return;
         }
         const frame = action.frames[index];
-        this.applyFrame(frame.ref);
+        const rendered = this.applyFrame(frame.ref);
+        if (firstFramePending && rendered) {
+          firstFramePending = false;
+          onFirstFrame?.();
+        }
         const isLastFrame = index === action.frames.length - 1;
         if (!action.loop && isLastFrame) {
           const elapsed = performance.now() - startedAt;
@@ -260,14 +273,15 @@ export class PetRenderer {
     this.initialized = false;
   }
 
-  private applyFrame(name: string): void {
+  private applyFrame(name: string): boolean {
     const frame = this.pack?.atlas.frames[name];
     const texture = this.textures.get(name);
     if (!frame || !texture || !this.sprite) {
-      return;
+      return false;
     }
     this.sprite.texture = texture;
     this.sprite.position.set(frame.offsetX, frame.offsetY);
     this.app.renderer.render({ container: this.app.stage });
+    return true;
   }
 }

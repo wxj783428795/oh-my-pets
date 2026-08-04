@@ -32,6 +32,7 @@ function validReport() {
       observedPids: Array.from({ length: 10 }, () => 100),
       typedCount: 100,
       minimumTypedCount: 100,
+      firstResponderPreserved: true,
       preserved: true,
     },
     sourceFingerprint: "a".repeat(64),
@@ -75,6 +76,7 @@ describe("桌面 smoke 报告", () => {
         observedPids: [...Array.from({ length: 9 }, () => 100), 200],
         typedCount: 100,
         minimumTypedCount: 100,
+        firstResponderPreserved: true,
       }),
     ).toBe(false);
     expect(
@@ -84,6 +86,7 @@ describe("桌面 smoke 报告", () => {
         observedPids: [...Array.from({ length: 9 }, () => 100), 300],
         typedCount: 100,
         minimumTypedCount: 100,
+        firstResponderPreserved: true,
       }),
     ).toBe(false);
     expect(
@@ -93,6 +96,7 @@ describe("桌面 smoke 报告", () => {
         observedPids: Array.from({ length: 10 }, () => 100),
         typedCount: 100,
         minimumTypedCount: 100,
+        firstResponderPreserved: true,
       }),
     ).toBe(true);
   });
@@ -105,6 +109,20 @@ describe("桌面 smoke 报告", () => {
         observedPids: Array.from({ length: 10 }, () => 100),
         typedCount: 42,
         minimumTypedCount: 100,
+        firstResponderPreserved: true,
+      }),
+    ).toBe(false);
+  });
+
+  test("按键数量完整但原 AppKit first responder 曾丢失时仍拒绝报告", () => {
+    expect(
+      startupFocusPreserved({
+        beforePid: 100,
+        appPid: 200,
+        observedPids: Array.from({ length: 10 }, () => 100),
+        typedCount: 100,
+        minimumTypedCount: 100,
+        firstResponderPreserved: false,
       }),
     ).toBe(false);
   });
@@ -117,6 +135,7 @@ describe("桌面 smoke 报告", () => {
         observedPids: [100, 100],
         typedCount: 100,
         minimumTypedCount: 100,
+        firstResponderPreserved: true,
       }),
     ).toBe(false);
   });
@@ -136,10 +155,65 @@ describe("桌面 smoke 报告", () => {
       finishProbedProcess({
         evidence: Promise.reject(new Error("连续输入中断")),
         target,
-        completion: Promise.resolve(),
       }),
     ).rejects.toThrow("连续输入中断");
     expect(target.killCalled).toBe(true);
+  });
+
+  test("独立启动焦点探针取得证据后即可收拢目标进程", async () => {
+    const target = {
+      exitCode: null,
+      signalCode: null,
+      killCalled: false,
+      kill() {
+        this.killCalled = true;
+        this.exitCode = 0;
+      },
+    };
+    const evidence = {
+      beforePid: 100,
+      appPid: 200,
+      observedPids: Array.from({ length: 10 }, () => 100),
+      typedCount: 100,
+      minimumTypedCount: 100,
+      firstResponderPreserved: true,
+    };
+
+    await expect(
+      finishProbedProcess({ evidence: Promise.resolve(evidence), target }),
+    ).resolves.toMatchObject({ preserved: true });
+    expect(target.killCalled).toBe(true);
+  });
+
+  test("真实应用在焦点取证完成前退出时拒绝拼接第二进程的 smoke 结果", async () => {
+    const target = new EventEmitter();
+    Object.assign(target, {
+      exitCode: null,
+      signalCode: null,
+      kill() {},
+    });
+    const evidence = new Promise((resolveEvidence) => {
+      setTimeout(
+        () =>
+          resolveEvidence({
+            beforePid: 100,
+            appPid: 200,
+            observedPids: Array.from({ length: 10 }, () => 100),
+            typedCount: 100,
+            minimumTypedCount: 100,
+            firstResponderPreserved: true,
+          }),
+        20,
+      );
+    });
+    queueMicrotask(() => {
+      target.exitCode = 1;
+      target.emit("exit", 1, null);
+    });
+
+    await expect(finishProbedProcess({ evidence, target })).rejects.toThrow(
+      "焦点取证完成前提前退出",
+    );
   });
 
   test("缺少连续输入证据时拒绝自动 smoke 报告", () => {
@@ -220,6 +294,24 @@ describe("桌面 smoke 报告", () => {
   test("人工验收保留点击穿透的物理体验检查", () => {
     expect(MANUAL_DESKTOP_CHECKS).toContain(
       "确认开启点击穿透后桌面目标可被物理点击，并能从菜单栏关闭穿透",
+    );
+  });
+
+  test("桌面验收覆盖直接互动、安静限制和无副作用文件投喂", () => {
+    expect(AUTOMATED_DESKTOP_CHECKS).toContain(
+      "direct_interaction_and_private_file_feed",
+    );
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认点击宠物热区会立即播放 tap_react，透明区点击不会触发反馈，且当前应用焦点保持不变",
+    );
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认从宠物热区拖动可跨显示器改变当前屏，快速和零速度释放都依次播放 fall、land、idle，撞边后宠物仍完全可见",
+    );
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认单个普通文件投喂播放 feed_react，文件内容和位置不变；文件夹、多个文件与非普通文件只播放一次 curious，界面和诊断不显示路径或文件名",
+    );
+    expect(MANUAL_DESKTOP_CHECKS).toContain(
+      "确认安静模式下仍可拖动重新定位，但点击和文件投喂不触发趣味反馈",
     );
   });
 

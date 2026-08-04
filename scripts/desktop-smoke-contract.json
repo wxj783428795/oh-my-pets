@@ -4,6 +4,7 @@
     "product_window_topology",
     "pet_window_contract",
     "native_window_motion_and_display_recall",
+    "direct_interaction_and_private_file_feed",
     "example_pet_pack_loaded",
     "frontend_pet_mounted",
     "product_state_startup_reset",
@@ -28,6 +29,10 @@
     "确认高级开发预览只能从偏好设置进入，关闭或异常不会隐藏宠物",
     "确认在高级开发预览中逐一播放 15 个动作，并在小、中、大三档尺寸下检查耳尖、眼睛、尾巴和脚底可辨；透明边缘、脚底基线、命中区和投喂区无肉眼可见漂移",
     "确认开启点击穿透后桌面目标可被物理点击，并能从菜单栏关闭穿透",
+    "确认点击宠物热区会立即播放 tap_react，透明区点击不会触发反馈，且当前应用焦点保持不变",
+    "确认从宠物热区拖动可跨显示器改变当前屏，快速和零速度释放都依次播放 fall、land、idle，撞边后宠物仍完全可见",
+    "确认单个普通文件投喂播放 feed_react，文件内容和位置不变；文件夹、多个文件与非普通文件只播放一次 curious，界面和诊断不显示路径或文件名",
+    "确认安静模式下仍可拖动重新定位，但点击和文件投喂不触发趣味反馈",
     "确认菜单栏的退出操作会同时结束宠物、偏好设置和菜单栏入口"
   ]
 }

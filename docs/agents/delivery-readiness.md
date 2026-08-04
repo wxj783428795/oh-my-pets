@@ -14,7 +14,7 @@
 | `pnpm ci:verify`          | `ci:bootstrap` 后执行最终 `pnpm verify`                         | 是，供干净环境与 CI  |
 | `pnpm verify:core`        | 范围/架构、Rust/Vitest、视觉/E2E、lint、WebView 构建            | 否                   |
 | `pnpm verify`             | `verify:core`、真实 `tauri build`、resolved ticket 关闭证据扫描 | 是                   |
-| `pnpm qa:desktop:auto`    | 构建真实 Tauri 应用并执行自动 smoke                             | 仅桌面自动化部分     |
+| `pnpm qa:desktop:auto`    | 隔离启动焦点探针与真实 Tauri 产品 smoke                         | 仅桌面自动化部分     |
 | `pnpm qa:desktop`         | 复用已通过的自动报告，构建并单次启动 `.app` 进入人工清单        | 是，需验收人逐项确认 |
 | `pnpm closeout:check`     | 扫描所有 resolved ticket                                        | 是                   |
 
@@ -48,9 +48,14 @@ Pull Request。分支职责、bugfix 路由、merge commit 和 ruleset 生命周
 
 `pnpm qa:desktop:auto` 的报告写入被 Git 忽略的 `target/desktop-smoke/report.json`，覆盖：
 
+该命令会使用同一构建产物和隔离偏好启动两个互不重叠的真实 Tauri 进程：第一个进程
+只在自有 AppKit 输入控件下采集启动焦点证据，完成后先清理；第二个进程再执行产品
+smoke。这样偏好设置按需创建等明确需要聚焦窗口的产品检查不会污染启动期间的
+first responder 证据。
+
 - 自有 AppKit 临时输入控件在应用启动期间持续收到按键，且真实前台应用 PID
-  在覆盖原生位置 smoke 的至少 10 次采样中保持不变；不借用用户文档，也不把
-  “PID 未切换”误当成完整焦点证据
+  在至少 10 次采样中保持不变，原 AppKit first responder 也从未丢失；不借用
+  用户文档，也不把“PID 未切换”或“按键总数足够”单独误当成完整焦点证据
 - 启动时只有真实 `pet` 窗口可见，`preferences` 未创建且旧 `main` 角色不存在
 - 宠物窗口不聚焦、无边框、不可缩放且始终置顶
 - 真实原生窗口按 Rust 运动模型改变坐标，再召回鼠标所在显示器安全角；过程中
