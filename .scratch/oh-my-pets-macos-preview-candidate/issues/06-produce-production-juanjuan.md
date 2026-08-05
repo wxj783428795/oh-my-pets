@@ -2,7 +2,7 @@
 
 Type: task
 Kind: feature
-Status: claimed
+Status: resolved
 Closeout-Contract: v1
 Blocked by: none
 
@@ -264,6 +264,26 @@ Blocked by: none
   交付路由，不改写 `main`；风险是流程资产曾表达错误 target。补救为从
   `main@6f06cc7` 建立受保护 integration、治理 PR 完整门禁、逐票 closeout 和
   最终全规格 review。
+- 2026-08-05 12:52 CST：本轮只验收 Issue 06 内容时，用户在真实
+  `820×650` 开发预览窗口发现底部动作不可见且滚轮无效。诊断红灯确认
+  `.workbench` 只有 `min-height: 100vh`，自身随内容长到 `758px`，而全局
+  `body { overflow: hidden }` 把超出部分裁掉；滚轮后 `scrollTop` 始终为 0。
+  按既有真实 Chromium 公共 seam 先补红测，再增加固定 `height: 100vh`；最终
+  工作台可滚动 `108px`，15 个动作全部进入视口，7 项 Chromium E2E 通过。
+- 2026-08-05 13:14 CST：用户继续真实投喂验收时确认点击、拖动正常，但普通
+  文件与文件夹均没有视觉反馈。最小红灯复现 macOS Retina 原生拖放位置
+  `(160,160)` 被前端再次除以 DPR 后变成局部 `(0,0)`，导致 Rust 判定在
+  `dropZone` 外并返回 `ignored`。固定 Tauri/Wry 版本在 macOS 直接上报 AppKit
+  逻辑点，因此由 Rust 明确发布平台坐标空间：macOS 使用逻辑点，其他平台继续
+  保留物理像素换算。红测转绿后，用户在重新构建的真实 `.app` 中分别确认普通
+  文件播放 `feed_react`、文件夹播放 `curious`。
+- 2026-08-05 13:29 CST：用户明确要求本轮只重验 Issue 06，不重复其他 issue
+  已经通过的通用桌面项目。通用项目因此复用既有真实 `pnpm qa:desktop` 报告；
+  本轮在最终产品源码构建的真实 `.app` 中由用户重新确认小／中／大三档尺寸、
+  视觉 QA 第 1–5 项、15 个动作可滚动查看、透明合成，以及脚底基线、点击区、
+  拖动与普通文件／文件夹投喂区无肉眼可见漂移。随后最终源码上的
+  `pnpm qa:desktop:auto` 13/13 通过，指纹为
+  `ed74cfbbf380c8dfaeae75a0f5578ad6a51d4b4edb9591ecb5636f04d27f04dd`。
 
 ## Closeout Evidence
 
@@ -273,32 +293,43 @@ Blocked by: none
 
 - Status: passed
 - Command: `pnpm verify`
-- Result: 2026-08-04 CST：最终相关源码上，正式卷卷 15 动作／86 帧机械校验、
-  81 个 Rust 测试、176 个 Web／工程测试、6 个 Chromium E2E、架构与范围、
-  lint、WebView、真实 Tauri release 构建及 closeout 扫描全部通过；随后真实
+- Result: 2026-08-05 CST：实现提交 `7688f0b1608b78b5abdec5e4388817bcf6b8b455`
+  对应的最终产品源码上，正式卷卷 15 动作／86 帧机械校验、81 个 Rust 测试、
+  176 个 Web／工程测试、7 个 Chromium E2E、架构与范围、lint、WebView、真实
+  Tauri release 构建及 closeout 扫描全部通过；随后真实
   `pnpm qa:desktop:auto` 13/13 项通过。
 
 ### Manual QA
 
-- Status: pending
+- Status: passed
 - Command: `pnpm qa:desktop`
-- Result: 自动桌面 smoke 已在最终源码上通过；正式交互式人工清单仍待用户逐项
-  确认，不能用自动结果代替。
-- Reason: 待真实 `.app` 三档尺寸、15 个动作、透明合成与最终退出人工验收。
+- Result: 通用桌面项目复用此前真实 `pnpm qa:desktop` 的已通过报告；按用户
+  明确批准的 Issue 06 窄验收边界，在最终产品源码构建的真实 `.app` 中人工确认
+  三档尺寸、15 个动作、视觉清单 1–5、透明合成、脚底基线和命中／投喂区；
+  普通文件 `feed_react` 与文件夹 `curious` 均由用户实际观察并确认通过。
+- Reason: 用户明确要求不重复其他 issue 已验收的通用项目；本票只复用未受本轮
+  内容／坐标修复影响的旧证据，并在当前最终产品源码上重新人工验收全部 Issue 06
+  专属内容，未把自动 smoke 或 Computer Use 伪记为人工视觉通过。
 
 ### Review
 
 - Standards: passed
 - Spec: passed
-- Notes: 上游合并首轮各发现一个交汇阻塞；按 TDD 修复 `idle` 首帧回执和正式
-  动作声明时长后复核均通过，无新增 hard violation、smell、规格缺失或 Issue 05
-  自主调度 scope creep。人工 closeout pending 不伪装成代码通过。
+- Notes: 最终双轴独立复审无阻塞实现发现，确认滚动与 Retina 投喂均为本票验收
+  修复且没有 Issue 05 自主调度 scope creep。Standards 仅保留两个非阻塞建议：
+  后续可增加 Rust 平台 cfg 断言，并为投喂 IPC 失败增加脱敏可观测记录；Spec
+  复审指出的唯一 closeout pending 已由本节最终证据、提交与 Answer 补齐。
 
 ### Commit
 
-- Status: pending
-- Hash: pending
+- Status: committed
+- Hash: `7688f0b1608b78b5abdec5e4388817bcf6b8b455`
 
 ## Answer
 
-修复中。
+已交付原创正式卷卷宠物包：15 个语义动作、86 个独立帧、`320×320` 标准画布
+和单图集，包含完整来源／使用权说明、接触表、动效预览、机械校验及 Chromium
+视觉基线。最终资源在真实 macOS `.app` 的三档尺寸下通过用户视觉验收，循环和
+非循环动作可辨且连续，完整卷尾、透明边缘、脚底基线、命中区和投喂区均无肉眼
+可见异常；开发预览可滚动查看全部动作，Retina 下普通文件与文件夹投喂分别正确
+播放 `feed_react` 与 `curious`。未实现行为调度、窗口运动或用户宠物包导入。
