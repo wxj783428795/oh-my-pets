@@ -1,6 +1,6 @@
-use std::{fs, time::Duration};
+use std::{collections::BTreeMap, fs, time::Duration};
 
-use oh_my_pets_domain::{Layout, Point, Rect, Size};
+use oh_my_pets_domain::{ActionFrame, Layout, PetAction, Point, Rect, Size};
 use oh_my_pets_lib::direct_interaction::{
     DirectInteraction, DragUpdate, InteractionAction, InteractionOutcome, InteractionPolicy,
     PointerInput, SurfacePoint, SurfaceSize, ThrowMotion, ThrowPhase, classify_file_drop,
@@ -439,6 +439,35 @@ fn interaction_actions_publish_stable_semantic_keys_and_completion_rules() {
     assert_eq!(
         InteractionAction::Idle.presentation(),
         ("idle", 60_000, false)
+    );
+}
+
+#[test]
+fn finite_interactions_use_the_loaded_action_frame_duration() {
+    let declared_action = PetAction {
+        r#loop: false,
+        frames: vec![
+            ActionFrame {
+                frame_ref: "tap_react_00".to_string(),
+                duration_ms: 120,
+            },
+            ActionFrame {
+                frame_ref: "tap_react_01".to_string(),
+                duration_ms: 600,
+            },
+        ],
+        cue_points: Vec::new(),
+        layout_override: None,
+        extra: BTreeMap::new(),
+    };
+
+    assert_eq!(
+        InteractionAction::TapReact.presentation_for(Some(&declared_action)),
+        ("tap_react", 720, true)
+    );
+    assert_eq!(
+        InteractionAction::DragHold.presentation_for(Some(&declared_action)),
+        ("drag_hold", 60_000, false)
     );
 }
 

@@ -26,6 +26,9 @@ Rust 测试按社区惯例放在 crate 内的 `tests/` 或 `#[cfg(test)]` 模块
 - `pnpm test:e2e:install`：把与固定 Playwright 版本匹配的 Chromium 安装到被忽略的 `target/playwright-browsers/`；升级 Playwright 后需重跑。
 - `pnpm test:e2e`：启动固定端口的本地 Vite 服务，在单一真实 Chromium 中比较 PixiJS Canvas 基线并运行有限 Web/UI E2E；普通运行禁止更新基线。
 - `pnpm test:e2e:update`：显式更新发生变化的视觉基线；运行后必须人工审阅 PNG 和 Git diff。
+- `pnpm pet:assets:check`：机械校验正式卷卷宠物包的 15 个动作、86 个独立帧、
+  `320×320` 标准画布、单图集、透明边界与统一脚底基线，并拒绝重复帧、整体
+  平移或简单缩放伪装的动画。
 - `pnpm test`：运行 Rust workspace 和前端全部测试。
 - `pnpm coverage:web`：使用 Vitest 3.2.7 与固定版本的 V8 provider 运行前端/工程脚本测试，输出文本摘要，并把 JSON 范围清单与 HTML 写入 `target/coverage/web/`。
 - `pnpm coverage:rust`：使用 `cargo-llvm-cov` 运行 Rust workspace 全 targets 测试，输出文本摘要，并把 JSON 范围清单与 HTML 写入 `target/coverage/rust/`；缺少工具时会给出固定版本的全局或 worktree 本地安装选项。

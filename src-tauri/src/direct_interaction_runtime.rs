@@ -73,8 +73,8 @@ impl InteractionPayload {
         }
     }
 
-    fn action(revision: u64, action: InteractionAction) -> Self {
-        let (name, hold_ms, complete_on_finish) = action.presentation();
+    fn action(revision: u64, presentation: (&'static str, u32, bool)) -> Self {
+        let (name, hold_ms, complete_on_finish) = presentation;
         Self {
             kind: "action",
             capture_id: None,
@@ -304,7 +304,14 @@ pub(crate) fn publish_action(
     action: InteractionAction,
     velocity: LogicalVelocity,
 ) -> Result<InteractionPayload, CommandError> {
-    let (name, hold_ms, complete_on_finish) = action.presentation();
+    let fallback = action.presentation();
+    let actions = state
+        .pet_pack
+        .behavior_actions()
+        .map_err(|error| CommandError::shell(error.to_string()))?;
+    let presentation =
+        action.presentation_for(actions.as_ref().and_then(|actions| actions.get(fallback.0)));
+    let (name, hold_ms, complete_on_finish) = presentation;
     let value = state
         .product
         .set_runtime_behavior(
@@ -317,7 +324,7 @@ pub(crate) fn publish_action(
         )
         .map_err(CommandError::shell)?;
     publish_product_state(app, &value)?;
-    Ok(InteractionPayload::action(revision, action))
+    Ok(InteractionPayload::action(revision, presentation))
 }
 
 fn schedule_throw(app: &AppHandle, revision: u64, velocity: LogicalVelocity) {

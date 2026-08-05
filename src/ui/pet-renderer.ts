@@ -57,7 +57,9 @@ export class PetRenderer {
       );
     }
 
-    const firstFrame = Object.keys(pack.atlas.frames)[0];
+    const firstFrame =
+      pack.manifest.actions.idle?.frames[0]?.ref ??
+      Object.keys(pack.atlas.frames)[0];
     const texture = this.textures.get(firstFrame);
     if (!texture) {
       throw new Error("图集没有可渲染帧");
@@ -72,6 +74,21 @@ export class PetRenderer {
   async play(
     actionName: string,
     holdMs: number,
+    onFirstFrame?: () => void,
+  ): Promise<void> {
+    await this.playAction(actionName, holdMs, onFirstFrame);
+  }
+
+  async playUntilStopped(
+    actionName: string,
+    onFirstFrame?: () => void,
+  ): Promise<void> {
+    await this.playAction(actionName, null, onFirstFrame);
+  }
+
+  private async playAction(
+    actionName: string,
+    holdMs: number | null,
     onFirstFrame?: () => void,
   ): Promise<void> {
     this.stop();
@@ -106,12 +123,15 @@ export class PetRenderer {
         const isLastFrame = index === action.frames.length - 1;
         if (!action.loop && isLastFrame) {
           const elapsed = performance.now() - startedAt;
-          this.timer = window.setTimeout(finish, Math.max(0, holdMs - elapsed));
+          const remaining =
+            holdMs === null ? frame.durationMs : Math.max(0, holdMs - elapsed);
+          this.timer = window.setTimeout(finish, remaining);
           return;
         }
         index = (index + 1) % action.frames.length;
         const elapsed = performance.now() - startedAt;
-        const shouldContinue = elapsed + frame.durationMs < holdMs;
+        const shouldContinue =
+          holdMs === null || elapsed + frame.durationMs < holdMs;
         if (shouldContinue) {
           this.timer = window.setTimeout(advance, frame.durationMs);
         } else {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "juanjuan-cat",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "displayName": "卷卷",
   "description": "一只安静、好奇、偶尔有点笨拙的短腿橘白猫。",
   "author": {
@@ -17,23 +17,23 @@
   "layout": {
     "baseline": {
       "x": 160,
-      "y": 292
+      "y": 288
     },
     "hitbox": {
-      "x": 54,
-      "y": 32,
-      "width": 212,
-      "height": 260
+      "x": 62,
+      "y": 54,
+      "width": 196,
+      "height": 234
     },
     "dropZone": {
-      "x": 86,
-      "y": 112,
-      "width": 148,
-      "height": 132
+      "x": 88,
+      "y": 116,
+      "width": 144,
+      "height": 124
     },
     "bubbleAnchor": {
       "x": 160,
-      "y": 24
+      "y": 34
     }
   },
   "actions": {
@@ -41,14 +41,42 @@
       "loop": false,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 900
+          "ref": "intro_00",
+          "durationMs": 90
+        },
+        {
+          "ref": "intro_01",
+          "durationMs": 90
+        },
+        {
+          "ref": "intro_02",
+          "durationMs": 100
+        },
+        {
+          "ref": "intro_03",
+          "durationMs": 100
+        },
+        {
+          "ref": "intro_04",
+          "durationMs": 120
+        },
+        {
+          "ref": "intro_05",
+          "durationMs": 140
+        },
+        {
+          "ref": "intro_06",
+          "durationMs": 220
+        },
+        {
+          "ref": "intro_07",
+          "durationMs": 320
         }
       ],
       "cuePoints": [
         {
           "name": "land",
-          "timeMs": 120
+          "timeMs": 300
         }
       ]
     },
@@ -56,14 +84,38 @@
       "loop": true,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 1800
+          "ref": "idle_00",
+          "durationMs": 580
+        },
+        {
+          "ref": "idle_01",
+          "durationMs": 100
+        },
+        {
+          "ref": "idle_02",
+          "durationMs": 90
+        },
+        {
+          "ref": "idle_03",
+          "durationMs": 100
+        },
+        {
+          "ref": "idle_04",
+          "durationMs": 100
+        },
+        {
+          "ref": "idle_05",
+          "durationMs": 480
         }
       ],
       "cuePoints": [
         {
           "name": "blink",
-          "timeMs": 900
+          "timeMs": 580
+        },
+        {
+          "name": "tail-flick",
+          "timeMs": 580
         }
       ]
     },
@@ -71,14 +123,38 @@
       "loop": true,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 480
+          "ref": "walk_left_00",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_left_01",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_left_02",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_left_03",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_left_04",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_left_05",
+          "durationMs": 110
         }
       ],
       "cuePoints": [
         {
           "name": "step-1",
-          "timeMs": 240
+          "timeMs": 110
+        },
+        {
+          "name": "step-2",
+          "timeMs": 440
         }
       ]
     },
@@ -86,14 +162,38 @@
       "loop": true,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 480
+          "ref": "walk_right_00",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_right_01",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_right_02",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_right_03",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_right_04",
+          "durationMs": 110
+        },
+        {
+          "ref": "walk_right_05",
+          "durationMs": 110
         }
       ],
       "cuePoints": [
         {
           "name": "step-1",
-          "timeMs": 240
+          "timeMs": 110
+        },
+        {
+          "name": "step-2",
+          "timeMs": 440
         }
       ]
     },
@@ -101,14 +201,30 @@
       "loop": true,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 2400
+          "ref": "sleep_00",
+          "durationMs": 380
+        },
+        {
+          "ref": "sleep_01",
+          "durationMs": 380
+        },
+        {
+          "ref": "sleep_02",
+          "durationMs": 380
+        },
+        {
+          "ref": "sleep_03",
+          "durationMs": 380
+        },
+        {
+          "ref": "sleep_04",
+          "durationMs": 380
         }
       ],
       "cuePoints": [
         {
           "name": "settle",
-          "timeMs": 240
+          "timeMs": 380
         }
       ]
     },
@@ -116,8 +232,12 @@
       "loop": true,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 600
+          "ref": "drag_hold_00",
+          "durationMs": 240
+        },
+        {
+          "ref": "drag_hold_01",
+          "durationMs": 240
         }
       ],
       "cuePoints": []
@@ -126,8 +246,16 @@
       "loop": true,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 180
+          "ref": "fall_00",
+          "durationMs": 120
+        },
+        {
+          "ref": "fall_01",
+          "durationMs": 120
+        },
+        {
+          "ref": "fall_02",
+          "durationMs": 120
         }
       ],
       "cuePoints": [
@@ -141,8 +269,20 @@
       "loop": false,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 320
+          "ref": "land_00",
+          "durationMs": 80
+        },
+        {
+          "ref": "land_01",
+          "durationMs": 100
+        },
+        {
+          "ref": "land_02",
+          "durationMs": 120
+        },
+        {
+          "ref": "land_03",
+          "durationMs": 200
         }
       ],
       "cuePoints": [
@@ -156,8 +296,24 @@
       "loop": false,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 620
+          "ref": "tap_react_00",
+          "durationMs": 120
+        },
+        {
+          "ref": "tap_react_01",
+          "durationMs": 100
+        },
+        {
+          "ref": "tap_react_02",
+          "durationMs": 120
+        },
+        {
+          "ref": "tap_react_03",
+          "durationMs": 140
+        },
+        {
+          "ref": "tap_react_04",
+          "durationMs": 240
         }
       ],
       "cuePoints": [
@@ -171,18 +327,42 @@
       "loop": false,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 1100
+          "ref": "feed_react_00",
+          "durationMs": 140
+        },
+        {
+          "ref": "feed_react_01",
+          "durationMs": 140
+        },
+        {
+          "ref": "feed_react_02",
+          "durationMs": 160
+        },
+        {
+          "ref": "feed_react_03",
+          "durationMs": 160
+        },
+        {
+          "ref": "feed_react_04",
+          "durationMs": 180
+        },
+        {
+          "ref": "feed_react_05",
+          "durationMs": 220
+        },
+        {
+          "ref": "feed_react_06",
+          "durationMs": 320
         }
       ],
       "cuePoints": [
         {
           "name": "sniff",
-          "timeMs": 180
+          "timeMs": 140
         },
         {
           "name": "grab",
-          "timeMs": 720
+          "timeMs": 600
         }
       ]
     },
@@ -190,14 +370,30 @@
       "loop": true,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 1200
+          "ref": "curious_00",
+          "durationMs": 220
+        },
+        {
+          "ref": "curious_01",
+          "durationMs": 220
+        },
+        {
+          "ref": "curious_02",
+          "durationMs": 220
+        },
+        {
+          "ref": "curious_03",
+          "durationMs": 220
+        },
+        {
+          "ref": "curious_04",
+          "durationMs": 320
         }
       ],
       "cuePoints": [
         {
           "name": "sniff",
-          "timeMs": 480
+          "timeMs": 440
         }
       ]
     },
@@ -205,14 +401,30 @@
       "loop": true,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 1200
+          "ref": "edge_play_00",
+          "durationMs": 220
+        },
+        {
+          "ref": "edge_play_01",
+          "durationMs": 220
+        },
+        {
+          "ref": "edge_play_02",
+          "durationMs": 220
+        },
+        {
+          "ref": "edge_play_03",
+          "durationMs": 220
+        },
+        {
+          "ref": "edge_play_04",
+          "durationMs": 320
         }
       ],
       "cuePoints": [
         {
           "name": "peek",
-          "timeMs": 640
+          "timeMs": 440
         }
       ]
     },
@@ -220,14 +432,26 @@
       "loop": true,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 2600
+          "ref": "quiet_idle_00",
+          "durationMs": 800
+        },
+        {
+          "ref": "quiet_idle_01",
+          "durationMs": 180
+        },
+        {
+          "ref": "quiet_idle_02",
+          "durationMs": 220
+        },
+        {
+          "ref": "quiet_idle_03",
+          "durationMs": 800
         }
       ],
       "cuePoints": [
         {
           "name": "slow-blink",
-          "timeMs": 1300
+          "timeMs": 800
         }
       ]
     },
@@ -235,18 +459,54 @@
       "loop": false,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 1800
+          "ref": "rare_1_00",
+          "durationMs": 180
+        },
+        {
+          "ref": "rare_1_01",
+          "durationMs": 160
+        },
+        {
+          "ref": "rare_1_02",
+          "durationMs": 160
+        },
+        {
+          "ref": "rare_1_03",
+          "durationMs": 160
+        },
+        {
+          "ref": "rare_1_04",
+          "durationMs": 180
+        },
+        {
+          "ref": "rare_1_05",
+          "durationMs": 200
+        },
+        {
+          "ref": "rare_1_06",
+          "durationMs": 200
+        },
+        {
+          "ref": "rare_1_07",
+          "durationMs": 220
+        },
+        {
+          "ref": "rare_1_08",
+          "durationMs": 300
+        },
+        {
+          "ref": "rare_1_09",
+          "durationMs": 500
         }
       ],
       "cuePoints": [
         {
           "name": "grab",
-          "timeMs": 420
+          "timeMs": 340
         },
         {
           "name": "crumple",
-          "timeMs": 1100
+          "timeMs": 840
         }
       ]
     },
@@ -254,21 +514,56 @@
       "loop": false,
       "frames": [
         {
-          "ref": "placeholder",
-          "durationMs": 1800
+          "ref": "rare_2_00",
+          "durationMs": 120
+        },
+        {
+          "ref": "rare_2_01",
+          "durationMs": 120
+        },
+        {
+          "ref": "rare_2_02",
+          "durationMs": 120
+        },
+        {
+          "ref": "rare_2_03",
+          "durationMs": 140
+        },
+        {
+          "ref": "rare_2_04",
+          "durationMs": 160
+        },
+        {
+          "ref": "rare_2_05",
+          "durationMs": 180
+        },
+        {
+          "ref": "rare_2_06",
+          "durationMs": 200
+        },
+        {
+          "ref": "rare_2_07",
+          "durationMs": 220
+        },
+        {
+          "ref": "rare_2_08",
+          "durationMs": 300
+        },
+        {
+          "ref": "rare_2_09",
+          "durationMs": 500
         }
       ],
       "cuePoints": [
         {
           "name": "slip",
-          "timeMs": 360
+          "timeMs": 240
         },
         {
           "name": "catch",
-          "timeMs": 1040
+          "timeMs": 940
         }
       ]
     }
   }
 }
-

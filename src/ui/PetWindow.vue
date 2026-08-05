@@ -18,9 +18,13 @@ const renderer = new PetRenderer();
 const { emit, getCurrentWindow, invoke, listen } = usePlatform();
 const petWindow = getCurrentWindow();
 type PointerArguments = Record<string, number>;
+type NativeFileDropCoordinateSpace = "logical" | "physical";
 type PointerTerminal =
   { kind: "end"; pointer: PointerArguments } | { kind: "cancel" };
 let unlistenProductState: UnlistenFn | undefined;
+let mountedPack: PetPackPayload | null = null;
+let idlePlaybackStarted = false;
+let idlePlaybackToken = 0;
 let unlistenInteraction: UnlistenFn | undefined;
 let unlistenDragDrop: UnlistenFn | undefined;
 let activeCaptureId: number | undefined;
@@ -64,12 +68,16 @@ async function applyInteraction(payload: InteractionPayload): Promise<void> {
     return;
   }
   actionRevision = Math.max(actionRevision, revision);
+  if (payload.action === "idle" && payload.completeOnFinish === false) {
+    stopIdlePlayback();
+    currentAction.value = "idle";
+    startIdlePlayback(() => reportVisibleInteraction(revision, "idle"));
+    return;
+  }
+  stopIdlePlayback();
   currentAction.value = payload.action;
   await renderer.play(payload.action, payload.holdMs, () => {
-    void emit("pet-interaction-visible", {
-      revision,
-      action: payload.action,
-    }).catch(() => undefined);
+    reportVisibleInteraction(revision, payload.action as string);
   });
   if (revision !== actionRevision || payload.completeOnFinish === false) {
     return;
@@ -247,12 +255,16 @@ function clearPointerSession(generation: number): void {
   pointerMovePending = false;
 }
 
-function nativeDropArguments(position: { x: number; y: number }) {
+function nativeDropArguments(
+  position: { x: number; y: number },
+  coordinateSpace: NativeFileDropCoordinateSpace,
+) {
   const bounds = petHost.value?.getBoundingClientRect();
   if (!bounds) {
     return undefined;
   }
-  const density = window.devicePixelRatio || 1;
+  const density =
+    coordinateSpace === "physical" ? window.devicePixelRatio || 1 : 1;
   return {
     localX: position.x / density - bounds.left,
     localY: position.y / density - bounds.top,
@@ -263,6 +275,9 @@ function nativeDropArguments(position: { x: number; y: number }) {
 }
 
 async function bindFileDrop(): Promise<void> {
+  const coordinateSpace = await invoke<NativeFileDropCoordinateSpace>(
+    "native_file_drop_coordinate_space",
+  );
   unlistenDragDrop = await petWindow.onDragDropEvent(({ payload }) => {
     if (payload.type === "leave") {
       dropActive.value = false;
@@ -273,7 +288,7 @@ async function bindFileDrop(): Promise<void> {
       return;
     }
     dropActive.value = false;
-    const input = nativeDropArguments(payload.position);
+    const input = nativeDropArguments(payload.position, coordinateSpace);
     if (!input) {
       return;
     }
@@ -310,12 +325,66 @@ async function reportSmoke(loaded: boolean, detail: string): Promise<void> {
   }
 }
 
+function reportVisibleInteraction(revision: number, action: string): void {
+  void emit("pet-interaction-visible", { revision, action }).catch(
+    () => undefined,
+  );
+}
+
+function stopIdlePlayback(): void {
+  idlePlaybackToken += 1;
+  const shouldStopRenderer =
+    idlePlaybackStarted || currentAction.value === "idle";
+  idlePlaybackStarted = false;
+  if (shouldStopRenderer) {
+    renderer.stop();
+  }
+}
+
+function startIdlePlayback(onFirstFrame?: () => void): void {
+  if (
+    idlePlaybackStarted ||
+    !mountedPack?.manifest.actions.idle ||
+    productState.value?.session.quietMode
+  ) {
+    return;
+  }
+  idlePlaybackStarted = true;
+  const token = ++idlePlaybackToken;
+  void renderer
+    .playUntilStopped("idle", onFirstFrame)
+    .catch(async (error: unknown) => {
+      if (token !== idlePlaybackToken) {
+        return;
+      }
+      loadFailure.value = errorMessage(error);
+      await reportSmoke(false, loadFailure.value);
+    })
+    .finally(() => {
+      if (token === idlePlaybackToken) {
+        idlePlaybackStarted = false;
+      }
+    });
+}
+
+function syncIdlePlayback(): void {
+  if (
+    productState.value?.session.quietMode ||
+    productState.value?.session.currentAction !== "idle"
+  ) {
+    stopIdlePlayback();
+  } else {
+    startIdlePlayback();
+  }
+}
+
 onMounted(async () => {
   try {
     unlistenProductState = await listen<ProductStateSnapshot>(
       "product-state",
       (event) => {
         productState.value = event.payload;
+        syncIdlePlayback();
       },
     );
     unlistenInteraction = await listen<InteractionPayload>(
@@ -344,6 +413,8 @@ onMounted(async () => {
       throw new Error("宠物窗口渲染容器不存在");
     }
     await renderer.mount(petHost.value, pack);
+    mountedPack = pack;
+    syncIdlePlayback();
     await reportSmoke(
       true,
       `${pack.summary.displayName} ${pack.summary.version} 已挂载到宠物窗口`,
@@ -365,6 +436,8 @@ onBeforeUnmount(() => {
   pendingPointerMove = undefined;
   pendingPointerTerminal = undefined;
   unlistenProductState?.();
+  mountedPack = null;
+  stopIdlePlayback();
   unlistenInteraction?.();
   unlistenDragDrop?.();
   renderer.destroy();

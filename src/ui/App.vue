@@ -317,7 +317,7 @@ async function handleReloadedPack(payload: PetPackPayload): Promise<void> {
     if (!(await mountPack(payload, loadingOperation))) {
       return;
     }
-    status.value = "已从原生事件重新加载示例宠物包。";
+    status.value = "已从原生事件重新加载正式卷卷。";
   } catch (error) {
     const failure = normalizeError(error);
     if (!claimFailure(failure, loadingOperation)) {
@@ -458,8 +458,8 @@ onBeforeUnmount(() => {
         <h1>把一只宠物包，<br />交给 Rust 照看。</h1>
       </div>
       <p class="hero-note">
-        当前只验证 macOS
-        预览版的工程结构、内容边界与恢复入口。图集是工程占位帧，不代表首发美术已完成。
+        当前验证 macOS
+        预览版的工程结构、内容边界与恢复入口，并使用正式卷卷宠物包检查完整渲染链路。
       </p>
     </section>
 
@@ -561,7 +561,7 @@ onBeforeUnmount(() => {
               }}</small>
             </button>
             <button type="button" @click="reloadPack">
-              <span>重新加载示例宠物包</span>
+              <span>重新加载正式卷卷</span>
               <small>再次执行 Rust 校验</small>
             </button>
             <button type="button" @click="exportDiagnostics">
@@ -601,9 +601,17 @@ onBeforeUnmount(() => {
             </div>
           </dl>
           <div class="action-cloud" aria-label="已加载语义动作">
-            <span v-for="action in actionNames" :key="action">{{
-              action
-            }}</span>
+            <button
+              v-for="action in actionNames"
+              :key="action"
+              type="button"
+              :data-preview-action="action"
+              :disabled="loading"
+              :aria-label="`预览${actionLabel(action)}动作`"
+              @click="triggerAction(action)"
+            >
+              {{ action }}
+            </button>
           </div>
         </article>
       </aside>

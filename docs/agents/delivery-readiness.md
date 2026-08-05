@@ -20,7 +20,15 @@
 
 `pnpm lint:web` 中 Oxlint 只检查 `src/ui`、`scripts`、`tests/e2e` 和根 Vite/Playwright 配置，并显式排除辅助资产与生成物；它能够分析 Vue `<script>`，但不补齐 template 专用规则。`vue-tsc --noEmit` 继续承担 Vue/TypeScript 类型检查，二者任一失败都会阻断该命令。
 
-`pnpm test:e2e` 使用固定 Playwright 与单一 Chromium，在 900×760 viewport、DPR 1、固定 locale/timezone/color scheme/reduced-motion 和固定时间下加载仓库内卷卷宠物包。它比较真实 PixiJS WebGL Canvas 的平台专属 expected 基线，并验证一次受控加载失败后的重新加载恢复。常规配置使用 `updateSnapshots: "none"`；只有 `pnpm test:e2e:update` 能显式更新变化的基线。expected 基线位于 `tests/e2e/**-snapshots/`，actual/diff、trace、HTML report 和浏览器缓存位于被忽略的 `target/playwright/`。详细边界见 `docs/visual-testing.md`。
+`pnpm test:e2e` 使用固定 Playwright 与单一 Chromium；默认场景固定在
+900×760 viewport、DPR 1，并为真实宠物表面增加独立的 320×320、DPR 2
+Retina 场景，locale/timezone/color scheme/reduced-motion 和时间均受控。
+它比较真实 PixiJS WebGL Canvas 的平台专属 expected 基线，并有限验证加载
+恢复、15 动作首帧、真实宠物 idle 换帧和偏好页滚动。常规配置使用
+`updateSnapshots: "none"`；只有 `pnpm test:e2e:update` 能显式更新变化的基线。
+expected 基线位于 `tests/e2e/**-snapshots/`，actual/diff、trace、HTML report
+和浏览器缓存位于被忽略的 `target/playwright/`。详细边界见
+`docs/visual-testing.md`。
 
 该套件是 Web/UI 与 renderer E2E：浏览器测试 seam 只提供固定 Tauri command 输入，不运行 Rust backend、WKWebView、菜单栏、透明窗口合成或操作系统交互。因此它不重复也不替代 `pnpm qa:desktop:auto` 和 `pnpm qa:desktop`。
 
@@ -52,7 +60,7 @@ first responder 证据。
 - 宠物窗口不聚焦、无边框、不可缩放且始终置顶
 - 真实原生窗口按 Rust 运动模型改变坐标，再召回鼠标所在显示器安全角；过程中
   不聚焦且始终只有一个 `pet` 实例
-- Rust 示例宠物包加载且包含动作与图集帧
+- Rust 正式卷卷宠物包加载且包含 15 个动作与 86 个图集帧
 - `pet` WebView 完成 PixiJS 示例宠物挂载
 - 会话状态以非安静、可见、可交互和 `idle` 启动，只恢复持久字段
 - macOS 系统登录项真实状态与 Rust 产品状态一致
@@ -62,7 +70,7 @@ first responder 证据。
 - 真实窗口开启并关闭点击穿透
 - 导出并重新读取本地诊断 Markdown
 
-这些检查仍不能替代人在真实桌面的判断。为避免待观察启动前先出现一轮可见的自动 smoke，必须先单独运行 `pnpm qa:desktop:auto`；该命令把参与桌面构建的源码与配置计算为 SHA-256 指纹并写入报告。`pnpm qa:desktop` 只接受现有的已通过且指纹与当前工作树一致的报告，再构建仅供本地 QA 的 macOS `.app`。自动与人工 QA 都使用 `target/desktop-smoke/preferences.json`，不读取或改写真实用户偏好；人工流程会在持久化项中控制重启，在损坏恢复项中备份隔离偏好、注入未知版本并在观察后恢复。报告缺失、不满足当前契约或源码不匹配时，人工命令会要求重跑自动 smoke；人工报告会固化本次已核对的同一源码指纹。该 `.app` 带仓库品牌图标，但作为 `LSUIElement` 菜单栏应用不会占据 Dock；这不代表正式发布签名、安装包或分发流程已经完成。验收人需要确认正常启动只显示宠物且不抢焦点，宠物窗口契约、动态菜单、偏好与系统登录项同步、持久化矩阵、损坏恢复、点击穿透的物理体验、真实原生移动、鼠标屏召回与显示器布局变化恢复，以及显式退出会清理全部窗口与菜单栏入口。只有单屏时必须把负坐标、混合缩放、上下排列和断开场景记录为确定性模拟证据，不能把 Space 当作第二块物理显示器或伪记双屏人工通过。首发宠物动作资源由对应内容 ticket 交付，不能用桌面壳 smoke 替代资源验收。命令只允许在 macOS（Darwin）交互式终端接受逐项结果；除脚本明确控制的重启外，应用必须持续运行到最后退出检查，并由菜单操作干净结束。非 macOS、非交互环境、意外提前结束或最后未干净退出都会失败。
+这些检查仍不能替代人在真实桌面的判断。为避免待观察启动前先出现一轮可见的自动 smoke，必须先单独运行 `pnpm qa:desktop:auto`；该命令把参与桌面构建的源码与配置计算为 SHA-256 指纹并写入报告。`pnpm qa:desktop` 只接受现有的已通过且指纹与当前工作树一致的报告，再构建仅供本地 QA 的 macOS `.app`。自动与人工 QA 都使用 `target/desktop-smoke/preferences.json`，不读取或改写真实用户偏好；人工流程会在持久化项中控制重启，在损坏恢复项中备份隔离偏好、注入未知版本并在观察后恢复。报告缺失、不满足当前契约或源码不匹配时，人工命令会要求重跑自动 smoke；人工报告会固化本次已核对的同一源码指纹。该 `.app` 带仓库品牌图标，但作为 `LSUIElement` 菜单栏应用不会占据 Dock；这不代表正式发布签名、安装包或分发流程已经完成。验收人需要确认正常启动只显示宠物且不抢焦点，宠物窗口契约、动态菜单、偏好与系统登录项同步、持久化矩阵、损坏恢复、正式卷卷全部 15 个动作和三档尺寸、透明边缘与脚底基线、点击穿透的物理体验、真实原生移动、鼠标屏召回与显示器布局变化恢复，以及显式退出会清理全部窗口与菜单栏入口。只有单屏时必须把负坐标、混合缩放、上下排列和断开场景记录为确定性模拟证据，不能把 Space 当作第二块物理显示器或伪记双屏人工通过。首发宠物动作资源由对应内容 ticket 交付，不能用桌面壳 smoke 替代资源验收。命令只允许在 macOS（Darwin）交互式终端接受逐项结果；除脚本明确控制的重启外，应用必须持续运行到最后退出检查，并由菜单操作干净结束。非 macOS、非交互环境、意外提前结束或最后未干净退出都会失败。
 
 ## 仓库边界
 

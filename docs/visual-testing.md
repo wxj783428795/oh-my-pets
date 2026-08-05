@@ -112,8 +112,10 @@ timezone、color scheme 等浏览器上下文输入。
 
 **实现约束**：视觉项目至少固定以下值：
 
-- 固定 viewport，不读取桌面窗口尺寸。
-- `deviceScaleFactor: 1`，同时固定 Pixi renderer `resolution`。
+- 默认项目固定 `900×760` viewport 和 `deviceScaleFactor: 1`；宠物透明窗口另有
+  一个 `320×320`、`deviceScaleFactor: 2` 的独立 Retina 场景与独立基线。
+- Pixi renderer 的 `resolution` 固定为场景 DPR（上限 2），并保持
+  `autoDensity`，从而同时锁定 Canvas 像素尺寸和 CSS 尺寸。
 - 固定 locale、timezone、color scheme 和 reduced-motion 偏好。
 - 只运行固定的 Chromium project；不隐式改用机器上已安装的 Chrome。
 - viewport 或 project 变化必须产生独立基线，不能用宽松阈值吸收尺寸差异。
@@ -139,14 +141,16 @@ transitions 和 Web Animations。Playwright Clock 可控制 `Date`、timer、
 
 - 显式选择 Pixi WebGL renderer，并固定 renderer 宽高、resolution、
   auto-density 和抗锯齿配置。
-- 产品 `PetRenderer` 在初始化后无条件停止 Pixi ticker，挂载固定宠物包的首帧
-  并执行一次显式 render；这三个产品渲染不变量共同固定 canvas 状态。浏览器
-  测试 seam 只提供固定宠物包和受控 Tauri 成功/失败输入，不接管渲染器内部。
-  `animations: "disabled"` 只能作为 DOM/CSS 兜底，不能被当作已冻结 Pixi
-  ticker 的证据。
+- 产品 `PetRenderer` 在初始化后无条件停止 Pixi ticker，明确从 `idle` 动作
+  首帧挂载并执行一次显式 render；真实宠物表面随后由声明式帧时长持续调用
+  显式 render。浏览器测试 seam 只提供固定宠物包和受控 Tauri 成功/失败输入，
+  不接管渲染器内部。
+- Retina 卷尾基线通过默认关闭的安静模式 seam 固定在 `idle_00`；逐帧播放由
+  相邻的 Playwright Clock 场景单独证明。`animations: "disabled"` 只能作为
+  DOM/CSS 兜底，不能被当作已冻结 Pixi timer 的证据。
 - 在页面脚本使用时间前安装 Playwright Clock，或通过同一测试 seam 注入固定
   时间；不要先让实时 ticker 运行若干不可控帧再截图。
-- 固定示例宠物包、动作、帧、位置和缩放；不得随机挑选资源或读取用户目录。
+- 固定正式卷卷宠物包、动作、帧、位置和缩放；不得随机挑选资源或读取用户目录。
 
 **文档事实**：Pixi `Assets.load()` 是 Promise-based，并在 Promise 完成时返回
 已加载资源；纹理加载后仍可能需要解码和上传 GPU。
@@ -232,12 +236,17 @@ pnpm exec playwright show-report target/playwright/report
 **实现约束**：由 Playwright `webServer` 启动根目录 Vite 命令，绑定固定
 loopback host 和固定端口，并启用 strict port；不得复用来源不明的已有服务。
 `pnpm dev:web:e2e` 是供 Playwright `webServer` 调用的内部根 script，
-不是独立的验收命令。测试只覆盖以下三件事：
+不是独立的验收命令。测试只覆盖以下六件事：
 
-1. 首次导航后应用进入 ready 状态。
-2. 示例宠物在真实 Chromium 的 Pixi canvas 中可见，并通过至少一个实际像素
-   基线证明 renderer 输出。
-3. 一条受控加载失败后的恢复，或页面 reload 后重新进入 ready 且宠物可见。
+1. 首次导航后应用进入 ready，正式卷卷在真实 Chromium 的 Pixi Canvas 中
+   可见，并通过像素基线证明 renderer 输出。
+2. 一条受控加载失败后可重新进入 ready 且宠物可见。
+3. 正式宠物包约定的 15 个动作按钮都能驱动真实 PixiJS Canvas 切换到各自
+   独立的固定首帧；该矩阵只验证渲染消费，不验证行为调度。
+4. `320×320`、DPR 2 的真实宠物表面以完整卷尾显示 `idle_00`，Canvas CSS
+   尺寸不被 Retina 像素尺寸放大。
+5. 真实宠物表面会按 `idle` 的首帧时长进入下一独立帧。
+6. 偏好设置内容高于窗口时，受约束的滚动容器能滚动到高级入口。
 
 这不是完整用户旅程矩阵。不要在该套件重复托盘、原生窗口恢复、透明窗口合成、
 点击穿透、诊断导出或 macOS 菜单栏断言。

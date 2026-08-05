@@ -501,6 +501,18 @@ fn shell_snapshot(state: State<'_, AppState>) -> Result<ShellSnapshot, CommandEr
 }
 
 #[tauri::command]
+fn native_file_drop_coordinate_space() -> &'static str {
+    #[cfg(target_os = "macos")]
+    {
+        "logical"
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        "physical"
+    }
+}
+
+#[tauri::command]
 fn product_state_snapshot(
     state: State<'_, AppState>,
 ) -> Result<ProductStateSnapshot, CommandError> {
@@ -971,6 +983,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             shell_snapshot,
+            native_file_drop_coordinate_space,
             product_state_snapshot,
             set_pet_size,
             set_activity_frequency,

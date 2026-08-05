@@ -25,10 +25,16 @@ pnpm dev
 常用检查：
 
 ```bash
+pnpm pet:assets:check
 pnpm verify
 ```
 
-`pnpm verify` 会依次运行正式范围检查、Rust/Vitest 测试、真实 Chromium 中的 Canvas 视觉与有限 Web E2E、lint、WebView 构建、真实 Tauri 桌面构建和 resolved ticket 关闭证据扫描，用于关闭最终改动。日常快速反馈可运行 `pnpm verify:core`，但它不能替代最终关闭检查。首次运行浏览器检查或升级 Playwright 后，先执行：
+`pnpm pet:assets:check` 单独检查正式卷卷的动作、帧、透明边界与脚底基线；
+`pnpm verify` 会依次运行该检查、正式范围检查、Rust/Vitest 测试、真实 Chromium
+中的 Canvas 视觉与有限 Web E2E、lint、WebView 构建、真实 Tauri 桌面构建和
+resolved ticket 关闭证据扫描，用于关闭最终改动。日常快速反馈可运行
+`pnpm verify:core`，但它不能替代最终关闭检查。首次运行浏览器检查或升级
+Playwright 后，先执行：
 
 ```bash
 pnpm test:e2e:install
@@ -80,11 +86,13 @@ pnpm qa:desktop
   宠物、打开偏好设置和退出应用
 - 偏好设置绑定尺寸、活动频率、登录项、内置卷卷重载、新手提示重放和诊断导出
 - 从偏好设置的受控入口打开高级开发预览
-- 由 Rust 加载、校验示例宠物包并选择语义动作，由 PixiJS 在 WebView 内切换帧
-- 在高级开发预览中重新加载示例宠物包、重置位置、切换点击穿透并导出本地
+- 由 Rust 加载、校验包含 15 个动作和 86 个独立帧的正式卷卷宠物包并选择语义
+  动作，由 PixiJS 在 WebView 内切换帧
+- 在高级开发预览中重新加载正式卷卷、逐项播放动作、重置位置、切换点击穿透并导出本地
   Markdown 诊断摘要
 
-示例图集是单帧工程占位资源，不代表首发宠物的完整动画内容已经完成。
+卷卷采用 `320×320` 标准画布语义、单张透明图集和统一脚底基线；制作来源与视觉
+QA 证据分别记录在宠物包和 `docs/qa/juanjuan-production/`。
 
 ## 已知约束
 

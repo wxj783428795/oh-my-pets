@@ -215,7 +215,7 @@ describe("宠物包状态", () => {
 
     const reload = wrapper
       .findAll("button")
-      .find((button) => button.text().includes("重新加载示例宠物包"));
+      .find((button) => button.text().includes("重新加载正式卷卷"));
     expect(reload).toBeDefined();
     await reload!.trigger("click");
     await flushPromises();
@@ -259,6 +259,46 @@ describe("宠物包状态", () => {
     wrapper.unmount();
   });
 
+  it("把已加载动作暴露为可逐项播放的公开预览入口", async () => {
+    const pack = createPack();
+    pack.manifest.actions = {
+      idle: {
+        loop: true,
+        frames: [{ ref: "idle_00", durationMs: 120 }],
+        cuePoints: [],
+      },
+      rare_1: {
+        loop: false,
+        frames: [{ ref: "rare_1_00", durationMs: 120 }],
+        cuePoints: [],
+      },
+    };
+    invoke
+      .mockResolvedValueOnce({
+        clickThrough: false,
+        alwaysOnTop: true,
+        visibleOnAllWorkspaces: true,
+      })
+      .mockResolvedValueOnce(pack)
+      .mockResolvedValueOnce({
+        action: "rare_1",
+        holdMs: 120,
+        reason: "逐项预览 rare_1",
+      });
+    const wrapper = mount(App);
+    await flushPromises();
+
+    const rareAction = wrapper.get('button[data-preview-action="rare_1"]');
+    await rareAction.trigger("click");
+    await flushPromises();
+
+    expect(invoke).toHaveBeenCalledWith("trigger_preview_action", {
+      action: "rare_1",
+    });
+    expect(rendererPlay).toHaveBeenCalledWith("rare_1", 120);
+    wrapper.unmount();
+  });
+
   it("菜单栏重载的渲染失败不会伪报成功", async () => {
     invoke
       .mockResolvedValueOnce({
@@ -275,7 +315,7 @@ describe("宠物包状态", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("图集加载失败");
-    expect(wrapper.text()).not.toContain("已从菜单栏重新加载示例宠物包");
+    expect(wrapper.text()).not.toContain("已从原生事件重新加载正式卷卷");
     expect(wrapper.find(".pack-stats").exists()).toBe(false);
     wrapper.unmount();
   });
@@ -375,7 +415,7 @@ describe("宠物包状态", () => {
     await flushPromises();
     const reload = wrapper
       .findAll("button")
-      .find((button) => button.text().includes("重新加载示例宠物包"));
+      .find((button) => button.text().includes("重新加载正式卷卷"));
     expect(reload).toBeDefined();
 
     await reload!.trigger("click");
@@ -410,7 +450,7 @@ describe("宠物包状态", () => {
     await flushPromises();
     const reload = wrapper
       .findAll("button")
-      .find((button) => button.text().includes("重新加载示例宠物包"));
+      .find((button) => button.text().includes("重新加载正式卷卷"));
     expect(reload).toBeDefined();
 
     await reload!.trigger("click");
@@ -451,7 +491,7 @@ describe("宠物包状态", () => {
     await flushPromises();
     const reload = wrapper
       .findAll("button")
-      .find((button) => button.text().includes("重新加载示例宠物包"));
+      .find((button) => button.text().includes("重新加载正式卷卷"));
     expect(reload).toBeDefined();
 
     await reload!.trigger("click");

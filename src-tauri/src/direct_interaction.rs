@@ -1,6 +1,6 @@
 use std::{path::PathBuf, time::Duration};
 
-use oh_my_pets_domain::{Layout, Rect, Size};
+use oh_my_pets_domain::{Layout, PetAction, Rect, Size};
 
 use crate::display_motion::LogicalVelocity;
 
@@ -90,6 +90,26 @@ impl InteractionAction {
             Self::FeedReact => ("feed_react", 1_100, true),
             Self::Curious => ("curious", 1_200, true),
         }
+    }
+
+    pub fn presentation_for(
+        self,
+        declared_action: Option<&PetAction>,
+    ) -> (&'static str, u32, bool) {
+        let (name, fallback_hold_ms, complete_on_finish) = self.presentation();
+        if !complete_on_finish {
+            return (name, fallback_hold_ms, false);
+        }
+        let hold_ms = declared_action
+            .and_then(|action| {
+                action
+                    .frames
+                    .iter()
+                    .try_fold(0_u32, |total, frame| total.checked_add(frame.duration_ms))
+            })
+            .filter(|duration| *duration > 0)
+            .unwrap_or(fallback_hold_ms);
+        (name, hold_ms, true)
     }
 }
 

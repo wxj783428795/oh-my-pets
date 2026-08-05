@@ -10,6 +10,7 @@ import type {
   ShellSnapshot,
 } from "./types";
 
+const browserTestParameters = new URLSearchParams(window.location.search);
 const shell: ShellSnapshot = {
   clickThrough: false,
   alwaysOnTop: true,
@@ -24,7 +25,7 @@ const productState: ProductStateSnapshot = {
     onboardingSeen: false,
   },
   session: {
-    quietMode: false,
+    quietMode: browserTestParameters.get("browserTestQuietMode") === "1",
     petHidden: false,
     clickThrough: false,
     currentAction: "idle",
@@ -54,11 +55,7 @@ function publishProductState(): void {
 }
 let revision = 0;
 let initialPackFailuresRemaining =
-  new URLSearchParams(window.location.search).get(
-    "browserTestInitialPackFailure",
-  ) === "1"
-    ? 2
-    : 0;
+  browserTestParameters.get("browserTestInitialPackFailure") === "1" ? 2 : 0;
 let fixturePromise:
   | Promise<{
       manifest: PetManifest;
@@ -75,7 +72,7 @@ async function readFixture(): Promise<{
     fetch("/pets/juanjuan/atlas.json"),
   ]).then(async ([manifestResponse, atlasResponse]) => {
     if (!manifestResponse.ok || !atlasResponse.ok) {
-      throw new Error("浏览器测试无法读取仓库内示例宠物包");
+      throw new Error("浏览器测试无法读取仓库内正式卷卷宠物包");
     }
     return {
       manifest: (await manifestResponse.json()) as PetManifest,
@@ -87,10 +84,26 @@ async function readFixture(): Promise<{
 
 async function createPack(currentRevision: number): Promise<PetPackPayload> {
   const { atlas, manifest } = await readFixture();
+  const sortedAtlas = {
+    ...atlas,
+    frames: Object.fromEntries(
+      Object.entries(atlas.frames).toSorted(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    ),
+  };
+  const sortedManifest = {
+    ...manifest,
+    actions: Object.fromEntries(
+      Object.entries(manifest.actions).toSorted(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    ),
+  };
   return {
     revision: currentRevision,
-    manifest,
-    atlas,
+    manifest: sortedManifest,
+    atlas: sortedAtlas,
     summary: {
       id: manifest.id,
       version: manifest.version,
@@ -136,11 +149,17 @@ async function loadPack(): Promise<PetPackPayload> {
   return createPack(revision);
 }
 
-function previewStep(action: string): BehaviorStep {
+async function previewStep(requestedAction: string): Promise<BehaviorStep> {
+  const { manifest } = await readFixture();
+  const action = manifest.actions[requestedAction] ? requestedAction : "idle";
   return {
     action,
     reason: `浏览器测试固定动作：${action}`,
-    holdMs: 100,
+    holdMs:
+      manifest.actions[action]?.frames.reduce(
+        (duration, frame) => duration + frame.durationMs,
+        0,
+      ) ?? 100,
   };
 }
 
@@ -152,6 +171,9 @@ async function invoke<T>(
   switch (command) {
     case "shell_snapshot":
       result = { ...shell };
+      break;
+    case "native_file_drop_coordinate_space":
+      result = "logical";
       break;
     case "product_state_snapshot":
       result = productState;
@@ -194,10 +216,10 @@ async function invoke<T>(
       result = productState;
       break;
     case "next_preview_action":
-      result = previewStep("idle");
+      result = await previewStep("idle");
       break;
     case "trigger_preview_action":
-      result = previewStep(String(args?.action ?? "idle"));
+      result = await previewStep(String(args?.action ?? "idle"));
       break;
     case "reset_window_position":
       result = undefined;

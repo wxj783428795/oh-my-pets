@@ -13,19 +13,25 @@ type InvokeMock = (
 ) => Promise<unknown>;
 type EmitMock = (event: string, payload?: unknown) => Promise<void>;
 
-const { rendererDestroy, rendererMount, rendererPlay, rendererStop } =
-  vi.hoisted(() => ({
-    rendererDestroy: vi.fn<() => void>(),
-    rendererMount: vi.fn<() => Promise<void>>(() => Promise.resolve()),
-    rendererPlay: vi.fn<
-      (
-        _action: string,
-        _holdMs: number,
-        _onFirstFrame?: () => void,
-      ) => Promise<void>
-    >(() => Promise.resolve()),
-    rendererStop: vi.fn<() => void>(),
-  }));
+const {
+  rendererDestroy,
+  rendererMount,
+  rendererPlay,
+  rendererPlayUntilStopped,
+  rendererStop,
+} = vi.hoisted(() => ({
+  rendererDestroy: vi.fn<() => void>(),
+  rendererMount: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  rendererPlay: vi.fn<
+    (
+      _action: string,
+      _holdMs: number,
+      _onFirstFrame?: () => void,
+    ) => Promise<void>
+  >(() => Promise.resolve()),
+  rendererPlayUntilStopped: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  rendererStop: vi.fn<() => void>(),
+}));
 
 let productStateListener:
   | ((event: {
@@ -87,6 +93,14 @@ vi.mock("./pet-renderer", () => ({
       await rendererMount();
     }
 
+    async playUntilStopped(
+      _action: string,
+      onFirstFrame?: () => void,
+    ): Promise<void> {
+      onFirstFrame?.();
+      await rendererPlayUntilStopped();
+    }
+
     destroy(): void {
       rendererDestroy();
     }
@@ -122,7 +136,16 @@ function createPack(): PetPackPayload {
         dropZone: { x: 86, y: 112, width: 148, height: 132 },
         bubbleAnchor: { x: 160, y: 24 },
       },
-      actions: {},
+      actions: {
+        idle: {
+          loop: true,
+          frames: [
+            { ref: "idle_00", durationMs: 720 },
+            { ref: "idle_01", durationMs: 180 },
+          ],
+          cuePoints: [],
+        },
+      },
     },
     atlas: {
       imagePath: "atlas.png",
@@ -154,6 +177,9 @@ function platform(invoke: InvokeMock, emit: EmitMock): Platform {
     ): Promise<T> {
       if (command === "product_state_snapshot") {
         return productSnapshot() as T;
+      }
+      if (command === "native_file_drop_coordinate_space") {
+        return "logical" as T;
       }
       return (await (args === undefined
         ? invoke(command)
@@ -189,11 +215,14 @@ function platform(invoke: InvokeMock, emit: EmitMock): Platform {
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   rendererDestroy.mockReset();
   rendererMount.mockReset();
   rendererMount.mockResolvedValue(undefined);
   rendererPlay.mockReset();
   rendererPlay.mockResolvedValue(undefined);
+  rendererPlayUntilStopped.mockReset();
+  rendererPlayUntilStopped.mockResolvedValue(undefined);
   rendererStop.mockReset();
   productStateListener = undefined;
   interactionListener = undefined;
@@ -222,13 +251,11 @@ describe("宠物产品表面", () => {
       }
       throw new Error(`unexpected command: ${command}`);
     });
+    const emit = vi.fn<EmitMock>().mockResolvedValue(undefined);
     const wrapper = mount(PetWindow, {
       global: {
         provide: {
-          [platformKey as symbol]: platform(
-            invoke,
-            vi.fn<EmitMock>().mockResolvedValue(undefined),
-          ),
+          [platformKey as symbol]: platform(invoke, emit),
         },
       },
     });
@@ -273,6 +300,57 @@ describe("宠物产品表面", () => {
       expect.objectContaining({ captureId: 7 }),
     );
     expect(rendererPlay).toHaveBeenCalledWith("tap_react", 620);
+    wrapper.unmount();
+  });
+
+  test("互动动作完成回到 idle 后恢复持续逐帧播放", async () => {
+    const invoke = vi.fn<InvokeMock>(async (command) => {
+      if (command === "current_pet_pack") {
+        return createPack();
+      }
+      if (command === "complete_pet_action") {
+        return {
+          kind: "action",
+          revision: 2,
+          action: "idle",
+          holdMs: 60_000,
+          completeOnFinish: false,
+        };
+      }
+      throw new Error(`unexpected command: ${command}`);
+    });
+    const emit = vi.fn<EmitMock>().mockResolvedValue(undefined);
+    const wrapper = mount(PetWindow, {
+      global: {
+        provide: {
+          [platformKey as symbol]: platform(invoke, emit),
+        },
+      },
+    });
+    await flushPromises();
+
+    interactionListener?.({
+      event: "pet-interaction",
+      id: 2,
+      payload: {
+        kind: "action",
+        revision: 1,
+        action: "tap_react",
+        holdMs: 620,
+        completeOnFinish: true,
+      },
+    });
+    await flushPromises();
+
+    expect(rendererPlay).toHaveBeenCalledWith("tap_react", 620);
+    expect(rendererPlayUntilStopped).toHaveBeenCalledTimes(2);
+    expect(emit).toHaveBeenCalledWith("pet-interaction-visible", {
+      revision: 2,
+      action: "idle",
+    });
+    expect(wrapper.get(".pet-canvas").attributes("data-current-action")).toBe(
+      "idle",
+    );
     wrapper.unmount();
   });
 
@@ -438,13 +516,20 @@ describe("宠物产品表面", () => {
     wrapper.unmount();
   });
 
-  test("原生文件拖放只把瞬时路径交给 Rust 且界面不暴露路径", async () => {
+  test("macOS Retina 中心投喂播放反馈且不暴露瞬时路径", async () => {
+    vi.stubGlobal("devicePixelRatio", 2);
     const sensitiveMarker = "OMP_PRIVATE_DROP_42";
-    const invoke = vi.fn<InvokeMock>(async (command) => {
+    const invoke = vi.fn<InvokeMock>(async (command, args) => {
       if (command === "current_pet_pack") {
         return createPack();
       }
       if (command === "handle_pet_file_drop") {
+        const pointer = args?.pointer as
+          | { localX: number; localY: number }
+          | undefined;
+        if (pointer?.localX !== 80 || pointer.localY !== 80) {
+          return { kind: "ignored" };
+        }
         return {
           kind: "action",
           revision: 1,
@@ -789,6 +874,7 @@ describe("宠物产品表面", () => {
     expect(wrapper.get("main").attributes("aria-label")).toBe("桌面宠物");
     expect(wrapper.find(".workbench").exists()).toBe(false);
     expect(rendererMount).toHaveBeenCalledOnce();
+    expect(rendererPlayUntilStopped).toHaveBeenCalledOnce();
     expect(emit).toHaveBeenCalledWith(
       "frontend-smoke-status",
       expect.objectContaining({
@@ -881,6 +967,17 @@ describe("宠物产品表面", () => {
 
     expect(wrapper.get("main").attributes("data-pet-size")).toBe("small");
     expect(wrapper.get("main").attributes("data-quiet-mode")).toBe("true");
+    expect(rendererStop).toHaveBeenCalledOnce();
+
+    next.session.quietMode = false;
+    productStateListener?.({
+      event: "product-state",
+      id: 2,
+      payload: next,
+    });
+    await flushPromises();
+
+    expect(rendererPlayUntilStopped).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 });
