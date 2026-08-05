@@ -306,6 +306,7 @@ button:focus-visible {
 
 .workbench {
   width: 100vw;
+  height: 100vh;
   min-height: 100vh;
   padding: 14px 22px 18px;
   overflow: auto;

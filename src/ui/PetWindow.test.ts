@@ -178,6 +178,9 @@ function platform(invoke: InvokeMock, emit: EmitMock): Platform {
       if (command === "product_state_snapshot") {
         return productSnapshot() as T;
       }
+      if (command === "native_file_drop_coordinate_space") {
+        return "logical" as T;
+      }
       return (await (args === undefined
         ? invoke(command)
         : invoke(command, args))) as T;
@@ -212,6 +215,7 @@ function platform(invoke: InvokeMock, emit: EmitMock): Platform {
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   rendererDestroy.mockReset();
   rendererMount.mockReset();
   rendererMount.mockResolvedValue(undefined);
@@ -512,13 +516,20 @@ describe("宠物产品表面", () => {
     wrapper.unmount();
   });
 
-  test("原生文件拖放只把瞬时路径交给 Rust 且界面不暴露路径", async () => {
+  test("macOS Retina 中心投喂播放反馈且不暴露瞬时路径", async () => {
+    vi.stubGlobal("devicePixelRatio", 2);
     const sensitiveMarker = "OMP_PRIVATE_DROP_42";
-    const invoke = vi.fn<InvokeMock>(async (command) => {
+    const invoke = vi.fn<InvokeMock>(async (command, args) => {
       if (command === "current_pet_pack") {
         return createPack();
       }
       if (command === "handle_pet_file_drop") {
+        const pointer = args?.pointer as
+          | { localX: number; localY: number }
+          | undefined;
+        if (pointer?.localX !== 80 || pointer.localY !== 80) {
+          return { kind: "ignored" };
+        }
         return {
           kind: "action",
           revision: 1,

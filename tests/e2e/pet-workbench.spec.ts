@@ -188,3 +188,24 @@ test("偏好设置在内容高于窗口时可滚动到高级入口", async ({ pa
     page.getByRole("heading", { name: "高级开发预览" }),
   ).toBeInViewport();
 });
+
+test("开发预览在桌面窗口高度内可滚动查看全部动作", async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 650 });
+  await page.goto("/?surface=developer");
+
+  const surface = page.locator(".workbench");
+  const lastAction = page.getByRole("button", {
+    name: "预览向右散步动作",
+  });
+  await expect(page.getByLabel("已加载语义动作").getByRole("button")).toHaveCount(
+    15,
+  );
+  await expect(lastAction).not.toBeInViewport();
+
+  await surface.hover();
+  await page.mouse.wheel(0, 900);
+  await expect
+    .poll(() => surface.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  await expect(lastAction).toBeInViewport();
+});

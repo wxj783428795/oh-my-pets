@@ -172,6 +172,9 @@ async function invoke<T>(
     case "shell_snapshot":
       result = { ...shell };
       break;
+    case "native_file_drop_coordinate_space":
+      result = "logical";
+      break;
     case "product_state_snapshot":
       result = productState;
       break;

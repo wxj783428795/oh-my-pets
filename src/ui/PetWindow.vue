@@ -18,6 +18,7 @@ const renderer = new PetRenderer();
 const { emit, getCurrentWindow, invoke, listen } = usePlatform();
 const petWindow = getCurrentWindow();
 type PointerArguments = Record<string, number>;
+type NativeFileDropCoordinateSpace = "logical" | "physical";
 type PointerTerminal =
   { kind: "end"; pointer: PointerArguments } | { kind: "cancel" };
 let unlistenProductState: UnlistenFn | undefined;
@@ -254,12 +255,16 @@ function clearPointerSession(generation: number): void {
   pointerMovePending = false;
 }
 
-function nativeDropArguments(position: { x: number; y: number }) {
+function nativeDropArguments(
+  position: { x: number; y: number },
+  coordinateSpace: NativeFileDropCoordinateSpace,
+) {
   const bounds = petHost.value?.getBoundingClientRect();
   if (!bounds) {
     return undefined;
   }
-  const density = window.devicePixelRatio || 1;
+  const density =
+    coordinateSpace === "physical" ? window.devicePixelRatio || 1 : 1;
   return {
     localX: position.x / density - bounds.left,
     localY: position.y / density - bounds.top,
@@ -270,6 +275,9 @@ function nativeDropArguments(position: { x: number; y: number }) {
 }
 
 async function bindFileDrop(): Promise<void> {
+  const coordinateSpace = await invoke<NativeFileDropCoordinateSpace>(
+    "native_file_drop_coordinate_space",
+  );
   unlistenDragDrop = await petWindow.onDragDropEvent(({ payload }) => {
     if (payload.type === "leave") {
       dropActive.value = false;
@@ -280,7 +288,7 @@ async function bindFileDrop(): Promise<void> {
       return;
     }
     dropActive.value = false;
-    const input = nativeDropArguments(payload.position);
+    const input = nativeDropArguments(payload.position, coordinateSpace);
     if (!input) {
       return;
     }
